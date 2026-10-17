@@ -30,11 +30,27 @@
             </form>
             <nav class="header-actions" aria-label="Особисті розділи">
                 <a class="header-action" href="#products"><span class="action-icon" aria-hidden="true">♡</span><span>Обране</span></a>
-                <a class="header-action" href="#contacts"><span class="action-icon" aria-hidden="true">♙</span><span>Увійти</span></a>
+                {% if user.is_authenticated %}
+                    <a class="header-action" href="#contacts"><span class="action-icon" aria-hidden="true">♙</span><span>Привіт, {{ user.username }}</span></a>
+                    <form class="header-logout" method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button class="header-action" type="submit"><span class="action-icon" aria-hidden="true">↪</span><span>Вийти</span></button>
+                    </form>
+                {% else %}
+                    <a class="header-action" href="{% url 'login' %}"><span class="action-icon" aria-hidden="true">♙</span><span>Увійти</span></a>
+                {% endif %}
                 <a class="header-action" href="#products"><span class="action-icon cart-icon" aria-hidden="true">▱<span class="cart-count">0</span></span><span>Кошик</span></a>
             </nav>
         </div>
     </header>
+
+    {% if messages %}
+        <div class="container site-messages" aria-live="polite">
+            {% for message in messages %}
+                <p class="site-message">{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
 
     <main class="container">
         <section class="hero-grid" aria-label="Рекомендовані пропозиції">

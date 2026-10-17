@@ -127,6 +127,14 @@
             gap: 18px;
         }
 
+        .header-logout { margin: 0; }
+        .header-logout button {
+            padding: 0;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+        }
+
         .header-action {
             min-width: 40px;
             display: grid;
@@ -138,6 +146,18 @@
         }
 
         .header-action .action-icon { font-size: 19px; line-height: 1; }
+
+        .site-messages { padding-top: 12px; }
+        .site-message {
+            margin: 0;
+            padding: 12px 16px;
+            border: 1px solid #dce9c5;
+            border-radius: 11px;
+            background: #f2f8e8;
+            color: #405c1b;
+            font-size: 13px;
+        }
+
         .cart-icon { position: relative; }
         .cart-count {
             position: absolute;

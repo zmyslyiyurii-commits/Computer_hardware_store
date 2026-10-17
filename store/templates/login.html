@@ -1,0 +1,59 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f6f7f4">
+    <link rel="stylesheet" href="{% static 'login.css' %}">
+    <title>Вхід — NEXUS</title>
+</head>
+<body>
+    <main class="auth-layout">
+        <section class="auth-card" aria-labelledby="login-title">
+            <a class="logo" href="{% url 'home' %}" aria-label="NEXUS — на головну">NEXUS<span>.</span></a>
+
+            <div class="auth-heading">
+                <span class="eyebrow">РАДІ БАЧИТИ ЗНОВУ</span>
+                <h1 id="login-title">З поверненням!</h1>
+                <p>Увійди, щоб продовжити вибирати техніку для свого сетапу.</p>
+            </div>
+
+            <form class="auth-form" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                {% if form.non_field_errors %}
+                    <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <label for="{{ form.username.id_for_label }}">Ім’я користувача</label>
+                {{ form.username }}
+                {% if form.username.errors %}<div class="field-errors" role="alert">{{ form.username.errors }}</div>{% endif %}
+
+                <label for="{{ form.password.id_for_label }}">Пароль</label>
+                {{ form.password }}
+                {% if form.password.errors %}<div class="field-errors" role="alert">{{ form.password.errors }}</div>{% endif %}
+
+                <button class="submit-button" type="submit">Увійти <span aria-hidden="true">→</span></button>
+            </form>
+
+            <p class="auth-switch">Ще не маєш акаунта? <a href="{% url 'register' %}">Створи акаунт</a></p>
+            <a class="back-link" href="{% url 'home' %}"><span aria-hidden="true">←</span> Повернутися до магазину</a>
+        </section>
+
+        <aside class="auth-aside" aria-label="Переваги NEXUS">
+            <div class="aside-orbit orbit-one"></div>
+            <div class="aside-orbit orbit-two"></div>
+            <div class="aside-content">
+                <span class="aside-mark" aria-hidden="true">N.</span>
+                <span class="aside-kicker">ТВІЙ ПРОСТІР. ТВОЯ ПОТУЖНІСТЬ.</span>
+                <h2>Усе для твого наступного апгрейду.</h2>
+                <p>Збирай ідеї, підбирай компоненти та створюй сетап, який працює саме для тебе.</p>
+                <div class="aside-note"><span class="note-dot"></span> Техніка для роботи, гри й натхнення</div>
+            </div>
+            <span class="aside-index">01 / NEXUS STORE</span>
+        </aside>
+    </main>
+</body>
+</html>

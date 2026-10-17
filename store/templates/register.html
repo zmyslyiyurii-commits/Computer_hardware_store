@@ -1,0 +1,61 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f6f7f4">
+    <link rel="stylesheet" href="{% static 'register.css' %}">
+    <title>Реєстрація — NEXUS</title>
+</head>
+<body>
+    <main class="auth-layout">
+        <section class="auth-card" aria-labelledby="register-title">
+            <a class="logo" href="{% url 'home' %}" aria-label="NEXUS — на головну">NEXUS<span>.</span></a>
+
+            <div class="auth-heading">
+                <span class="eyebrow">ПОЧНИ СВІЙ АПГРЕЙД</span>
+                <h1 id="register-title">Створи акаунт</h1>
+                <p>Зареєструйся, щоб зберігати обране та швидше оформлювати покупки.</p>
+            </div>
+
+            <form class="auth-form" method="post">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <label for="{{ form.username.id_for_label }}">Ім’я користувача</label>
+                {{ form.username }}
+                {% if form.username.errors %}<div class="field-errors" role="alert">{{ form.username.errors }}</div>{% endif %}
+
+                <label for="{{ form.password1.id_for_label }}">Пароль</label>
+                {{ form.password1 }}
+                {% if form.password1.errors %}<div class="field-errors" role="alert">{{ form.password1.errors }}</div>{% endif %}
+
+                <label for="{{ form.password2.id_for_label }}">Підтверди пароль</label>
+                {{ form.password2 }}
+                {% if form.password2.errors %}<div class="field-errors" role="alert">{{ form.password2.errors }}</div>{% endif %}
+
+                <button class="submit-button" type="submit">Створити акаунт <span aria-hidden="true">→</span></button>
+            </form>
+
+            <p class="auth-switch">Вже маєш акаунт? <a href="{% url 'login' %}">Увійти</a></p>
+            <a class="back-link" href="{% url 'home' %}"><span aria-hidden="true">←</span> Повернутися до магазину</a>
+        </section>
+
+        <aside class="auth-aside" aria-label="Переваги NEXUS">
+            <div class="aside-orbit orbit-one"></div>
+            <div class="aside-orbit orbit-two"></div>
+            <div class="aside-content">
+                <span class="aside-mark" aria-hidden="true">N.</span>
+                <span class="aside-kicker">ТВІЙ НАСТУПНИЙ РІВЕНЬ ПОЧИНАЄТЬСЯ ТУТ</span>
+                <h2>Знайди все для ідеального сетапу.</h2>
+                <p>Ноутбуки, комплектуючі та аксесуари — обирай техніку під свої задачі.</p>
+                <div class="aside-note"><span class="note-dot"></span> Твій простір. Твоя потужність.</div>
+            </div>
+            <span class="aside-index">02 / NEXUS STORE</span>
+        </aside>
+    </main>
+</body>
+</html>
