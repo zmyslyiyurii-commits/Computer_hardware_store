@@ -29,6 +29,14 @@
                 {{ form.username }}
                 {% if form.username.errors %}<div class="field-errors" role="alert">{{ form.username.errors }}</div>{% endif %}
 
+                <label for="{{ form.last_name.id_for_label }}">Прізвище</label>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}<div class="field-errors" role="alert">{{ form.last_name.errors }}</div>{% endif %}
+
+                <label for="{{ form.email.id_for_label }}">Електронна пошта</label>
+                {{ form.email }}
+                {% if form.email.errors %}<div class="field-errors" role="alert">{{ form.email.errors }}</div>{% endif %}
+
                 <label for="{{ form.password1.id_for_label }}">Пароль</label>
                 {{ form.password1 }}
                 {% if form.password1.errors %}<div class="field-errors" role="alert">{{ form.password1.errors }}</div>{% endif %}

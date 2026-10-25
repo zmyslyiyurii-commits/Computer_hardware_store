@@ -1,0 +1,62 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f6f7f4">
+    <link rel="stylesheet" href="{% static 'profile.css' %}">
+    <title>Мій профіль — NEXUS</title>
+</head>
+<body>
+    <header class="profile-header">
+        <a class="logo" href="{% url 'home' %}" aria-label="NEXUS — на головну">NEXUS<span>.</span></a>
+        <a class="back-link" href="{% url 'home' %}"><span aria-hidden="true">←</span> До магазину</a>
+    </header>
+
+    <main class="profile-layout">
+        <div class="profile-heading">
+            <span class="eyebrow">ОСОБИСТИЙ КАБІНЕТ</span>
+            <h1>Мій профіль</h1>
+            <p>Тут зібрана інформація про твій акаунт.</p>
+        </div>
+
+        <section class="profile-card" aria-labelledby="account-title">
+            <div class="account-heading">
+                <div class="avatar" aria-hidden="true">{{ user.username|first|upper }}</div>
+                <div>
+                    <span class="account-label">ТВІЙ АКАУНТ</span>
+                    <h2 id="account-title">{{ user.username }}</h2>
+                </div>
+            </div>
+
+            <dl class="account-details">
+                <div class="detail-row">
+                    <dt>Ім’я користувача</dt>
+                    <dd>{{ user.username }}</dd>
+                </div>
+                <div class="detail-row">
+                    <dt>Прізвище</dt>
+                    <dd>{% if user.last_name %}{{ user.last_name }}{% else %}<span class="detail-muted">Не вказане</span>{% endif %}</dd>
+                </div>
+                <div class="detail-row">
+                    <dt>Електронна пошта</dt>
+                    <dd>{% if user.email %}{{ user.email }}{% else %}<span class="detail-muted">Не вказана</span>{% endif %}</dd>
+                </div>
+                <div class="detail-row">
+                    <dt>Дата реєстрації</dt>
+                    <dd>{{ user.date_joined|date:"d.m.Y" }}</dd>
+                </div>
+            </dl>
+
+            <div class="profile-footer">
+                <p>Додаткові налаштування профілю з’являться тут.</p>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="logout-button" type="submit"><span aria-hidden="true">↪</span> Вийти з акаунту</button>
+                </form>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

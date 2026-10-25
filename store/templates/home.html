@@ -31,11 +31,7 @@
             <nav class="header-actions" aria-label="Особисті розділи">
                 <a class="header-action" href="#products"><span class="action-icon" aria-hidden="true">♡</span><span>Обране</span></a>
                 {% if user.is_authenticated %}
-                    <a class="header-action" href="#contacts"><span class="action-icon" aria-hidden="true">♙</span><span>Привіт, {{ user.username }}</span></a>
-                    <form class="header-logout" method="post" action="{% url 'logout' %}">
-                        {% csrf_token %}
-                        <button class="header-action" type="submit"><span class="action-icon" aria-hidden="true">↪</span><span>Вийти</span></button>
-                    </form>
+                    <a class="header-action" href="{% url 'profile' %}"><span class="action-icon" aria-hidden="true">♙</span><span>Привіт, {{ user.username }}</span></a>
                 {% else %}
                     <a class="header-action" href="{% url 'login' %}"><span class="action-icon" aria-hidden="true">♙</span><span>Увійти</span></a>
                 {% endif %}
