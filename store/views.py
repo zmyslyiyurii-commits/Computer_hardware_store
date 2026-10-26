@@ -5,9 +5,15 @@ from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView as DjangoLoginView
 from django.views.generic import CreateView, TemplateView
 from store.forms import RegistrationForm
+from store.models import Product
 
 class HomeView(TemplateView):
     template_name = 'home.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['products'] = Product.objects.filter(is_active=True)
+        return context
 
 class ProfileView(LoginRequiredMixin, TemplateView):
     template_name = 'profile.html'
