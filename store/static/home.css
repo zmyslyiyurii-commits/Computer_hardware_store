@@ -343,6 +343,7 @@
         .category-card:hover { transform: translateY(-3px); border-color: #c6d9a5; }
         .category-icon { font-size: 25px; }
         .category-card span:last-child { font-size: 12px; font-weight: 700; }
+        .empty-categories { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 13px; }
 
         .product-grid {
             display: grid;
