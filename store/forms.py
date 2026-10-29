@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 
 
 class RegistrationForm(UserCreationForm):
+    # Додаємо до стандартної форми Django обов'язкові прізвище та email.
     last_name = forms.CharField(
         label='Прізвище',
         max_length=150,

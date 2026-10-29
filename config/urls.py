@@ -17,11 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.contrib.auth.views import LogoutView
-from store.views import HomeView, LoginView, ProfileView, RegisterView
+from store.views import CategoryProductsView, HomeView, LoginView, ProfileView, RegisterView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', HomeView.as_view(), name='home'),
+    # ID категорії визначає, товари якої категорії показати в каталозі.
+    path('category/<int:category_id>/', CategoryProductsView.as_view(), name='category_products'),
     path('login/', LoginView.as_view(), name='login'),
     path('register/', RegisterView.as_view(), name='register'),
     path('profile/', ProfileView.as_view(), name='profile'),

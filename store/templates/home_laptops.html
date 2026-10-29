@@ -1,0 +1,110 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f6f7f4">
+    <title>{{ category_title }} — NEXUS</title>
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+    <link rel="stylesheet" href="{% static 'home_laptops.css' %}">
+</head>
+<body>
+    <div class="topline">
+        <div class="container topline-inner">
+            <span>Техніка для роботи, гри й натхнення</span>
+            <nav class="topline-links" aria-label="Додаткова навігація">
+                <a href="{% url 'home' %}#service">Доставка та оплата</a>
+                <a href="{% url 'home' %}#service">Гарантія</a>
+                <a href="{% url 'home' %}#contacts">Контакти</a>
+            </nav>
+        </div>
+    </div>
+
+    <header class="main-header">
+        <div class="container header-row">
+            <a class="logo" href="{% url 'home' %}" aria-label="NEXUS — на головну">NEXUS<span>.</span></a>
+            <a class="catalog-button" href="{% url 'home' %}#categories"><span class="menu-icon" aria-hidden="true">☰</span> Каталог</a>
+            <form class="search" role="search" action="{% url 'home' %}" method="get">
+                <input type="search" name="q" placeholder="Знайти ноутбук, відеокарту, аксесуар..." aria-label="Пошук товарів">
+                <button type="submit" aria-label="Шукати">⌕</button>
+            </form>
+            <nav class="header-actions" aria-label="Особисті розділи">
+                <a class="header-action" href="{% url 'home' %}#products"><span class="action-icon" aria-hidden="true">♡</span><span>Обране</span></a>
+                {% if user.is_authenticated %}
+                    <a class="header-action" href="{% url 'profile' %}"><span class="action-icon" aria-hidden="true">♙</span><span>Привіт, {{ user.username }}</span></a>
+                {% else %}
+                    <a class="header-action" href="{% url 'login' %}"><span class="action-icon" aria-hidden="true">♙</span><span>Увійти</span></a>
+                {% endif %}
+                <a class="header-action" href="{% url 'home' %}#products"><span class="action-icon cart-icon" aria-hidden="true">▱<span class="cart-count">0</span></span><span>Кошик</span></a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page-container catalog-page">
+        <div class="catalog-title">
+            <div>
+                <p class="eyebrow">Знайди свій наступний пристрій</p>
+                <h1>{{ category_title }}</h1>
+                <p class="catalog-description">Обирай техніку для роботи, навчання та відпочинку.</p>
+            </div>
+            <span class="product-count">{{ products|length }} товарів</span>
+        </div>
+
+        <div class="catalog-layout{% if filter_groups %} has-filters{% endif %}">
+            {% if filter_groups %}
+                <aside class="filters" aria-label="Фільтри товарів">
+                    <div class="filters-heading">
+                        <h2>Фільтри</h2>
+                        <span>Незабаром</span>
+                    </div>
+                    <div class="filter-list">
+                        {% for filter_name in filter_groups %}
+                            <details class="filter-group" {% if forloop.first %}open{% endif %}>
+                                <summary>{{ filter_name }}<span class="chevron" aria-hidden="true">›</span></summary>
+                                <div class="filter-placeholder">Варіанти фільтра буде додано</div>
+                            </details>
+                        {% endfor %}
+                    </div>
+                </aside>
+            {% endif %}
+
+            <section class="products-section" aria-label="Товари категорії {{ category.name }}">
+                {% if products %}
+                    <div class="product-grid">
+                        {% for product in products %}
+                            <article class="product-card">
+                                <div class="product-badge-slot">
+                                    {% if product.badge %}<span class="badge">{{ product.badge }}</span>{% endif %}
+                                </div>
+                                <div class="product-image">
+                                    {% if product.image_url %}
+                                        <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                                    {% else %}
+                                        <span class="product-placeholder" aria-hidden="true">NEXUS</span>
+                                    {% endif %}
+                                </div>
+                                <div class="product-info">
+                                    <span class="product-type">{{ product.category.name }}</span>
+                                    <h2 class="product-name">{{ product.name }}</h2>
+                                    <div class="product-bottom">
+                                        <span class="price">{{ product.price|floatformat:"-2" }} ₴</span>
+                                        <button class="add-button" type="button" aria-label="Додати {{ product.name }} у кошик">+</button>
+                                    </div>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <span class="empty-icon" aria-hidden="true">⌕</span>
+                        <h2>У цій категорії поки немає товарів</h2>
+                        <p>Коли товари будуть додані через адмінпанель, вони з’являться тут.</p>
+                        <a href="{% url 'home' %}">Повернутися на головну</a>
+                    </div>
+                {% endif %}
+            </section>
+        </div>
+    </main>
+</body>
+</html>

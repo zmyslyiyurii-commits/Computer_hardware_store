@@ -90,7 +90,7 @@
             </div>
             <div class="category-grid">
                 {% for category in categories %}
-                    <a class="category-card" href="#products">
+                    <a class="category-card" href="{% url 'category_products' category.pk %}">
                         <span class="category-icon" aria-hidden="true">{{ category.icon|default:"▱" }}</span>
                         <span>{{ category.name }}</span>
                     </a>
