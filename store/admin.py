@@ -18,3 +18,38 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ('name', 'category__name')
     list_editable = ('is_active',)
     ordering = ('-created_at',)
+    fieldsets = (
+        ('Основна інформація', {
+            'fields': ('name', 'category', 'price', 'image_url', 'badge', 'is_active'),
+        }),
+        ('Характеристики ноутбука для фільтрів', {
+            'fields': (
+                'manufacturer',
+                'laptop_type',
+                'display_diagonal',
+                'resolution',
+                'matrix_type',
+                'screen_surface',
+                'refresh_rate',
+                'intel_generation',
+                'amd_generation',
+                'processor',
+                'processor_cores',
+                'ram_type',
+                'ram_capacity',
+                'ram_slots',
+                'ssd_capacity',
+                'graphics_type',
+                'discrete_graphics_series',
+                'video_memory',
+                'wireless_technologies',
+                'interfaces',
+                'operating_system',
+                'battery_capacity',
+                'features',
+                'weight',
+                'color',
+            ),
+            'classes': ('collapse',),
+        }),
+    )

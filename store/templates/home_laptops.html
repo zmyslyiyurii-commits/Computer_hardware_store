@@ -56,16 +56,63 @@
                 <aside class="filters" aria-label="Фільтри товарів">
                     <div class="filters-heading">
                         <h2>Фільтри</h2>
-                        <span>Незабаром</span>
+                        <a class="clear-filters" href="{% url 'category_products' category.pk %}">Очистити</a>
                     </div>
-                    <div class="filter-list">
-                        {% for filter_name in filter_groups %}
-                            <details class="filter-group" {% if forloop.first %}open{% endif %}>
-                                <summary>{{ filter_name }}<span class="chevron" aria-hidden="true">›</span></summary>
-                                <div class="filter-placeholder">Варіанти фільтра буде додано</div>
-                            </details>
-                        {% endfor %}
-                    </div>
+                    <form method="get" class="filter-form">
+                        {% if laptop_filter_form %}
+                            <div class="filter-list">
+                                {% if laptop_filter_form.non_field_errors %}
+                                    <div class="filter-errors">{{ laptop_filter_form.non_field_errors }}</div>
+                                {% endif %}
+                                <details class="filter-group" open>
+                                    <summary>Ціна<span class="chevron" aria-hidden="true">›</span></summary>
+                                    <div class="price-range">
+                                        <label>
+                                            <span>Від, ₴</span>
+                                            {{ laptop_filter_form.price_min }}
+                                        </label>
+                                        <label>
+                                            <span>До, ₴</span>
+                                            {{ laptop_filter_form.price_max }}
+                                        </label>
+                                        {% for error in laptop_filter_form.price_min.errors %}
+                                            <span class="filter-error">{{ error }}</span>
+                                        {% endfor %}
+                                        {% for error in laptop_filter_form.price_max.errors %}
+                                            <span class="filter-error">{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </details>
+                                {% for group in filter_groups %}
+                                    <details class="filter-group" {% if group.field.value or forloop.first %}open{% endif %}>
+                                        <summary>{{ group.name }}<span class="chevron" aria-hidden="true">›</span></summary>
+                                        <div class="filter-options">
+                                            {% for error in group.field.errors %}
+                                                <span class="filter-error">{{ error }}</span>
+                                            {% endfor %}
+                                            {{ group.field }}
+                                        </div>
+                                    </details>
+                                {% endfor %}
+                                {% for filter_name in placeholder_filter_groups %}
+                                    <details class="filter-group">
+                                        <summary>{{ filter_name }}<span class="chevron" aria-hidden="true">›</span></summary>
+                                        <div class="filter-placeholder">Варіанти фільтра буде додано</div>
+                                    </details>
+                                {% endfor %}
+                            </div>
+                            <button class="apply-filters" type="submit">Застосувати фільтри</button>
+                        {% else %}
+                            <div class="filter-list">
+                                {% for group in filter_groups %}
+                                    <details class="filter-group">
+                                        <summary>{{ group.name }}<span class="chevron" aria-hidden="true">›</span></summary>
+                                        <div class="filter-placeholder">Варіанти фільтра буде додано</div>
+                                    </details>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </form>
                 </aside>
             {% endif %}
 

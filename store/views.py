@@ -3,9 +3,10 @@ from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView as DjangoLoginView
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.views.generic import CreateView, TemplateView
-from store.forms import RegistrationForm
+from store.forms import LaptopProductFilterForm, RegistrationForm
 from store.models import Category, Product
 
 
@@ -40,36 +41,49 @@ class CategoryProductsView(TemplateView):
             is_active=True,
         ).select_related('category')
         context['filter_groups'] = ()
-        # Поки що це лише заголовки фільтрів із заглушками, без відбору товарів.
+        context['laptop_filter_form'] = None
+        context['placeholder_filter_groups'] = ()
         if category.name.strip().casefold().startswith('ноутбук'):
-            context['filter_groups'] = (
-                'Ціна',
-                'Виробник',
+            base_products = context['products']
+            filter_form = LaptopProductFilterForm(
+                self.request.GET or None,
+                products=base_products,
+            )
+            if filter_form.is_valid():
+                cleaned_data = filter_form.cleaned_data
+                if cleaned_data['price_min'] is not None:
+                    context['products'] = context['products'].filter(
+                        price__gte=cleaned_data['price_min'],
+                    )
+                if cleaned_data['price_max'] is not None:
+                    context['products'] = context['products'].filter(
+                        price__lte=cleaned_data['price_max'],
+                    )
+                for field_name, _ in filter_form.filter_fields:
+                    selected_values = cleaned_data[field_name]
+                    if selected_values:
+                        if field_name in filter_form.multi_value_fields:
+                            matching_values = Q()
+                            for value in selected_values:
+                                matching_values |= (
+                                    Q(**{f'{field_name}__iexact': value})
+                                    | Q(**{f'{field_name}__istartswith': f'{value},'})
+                                    | Q(**{f'{field_name}__icontains': f', {value},'})
+                                    | Q(**{f'{field_name}__icontains': f',{value},'})
+                                    | Q(**{f'{field_name}__iendswith': f', {value}'})
+                                    | Q(**{f'{field_name}__iendswith': f',{value}'})
+                                )
+                            context['products'] = context['products'].filter(matching_values)
+                        else:
+                            context['products'] = context['products'].filter(
+                                **{f'{field_name}__in': selected_values},
+                            )
+
+            context['laptop_filter_form'] = filter_form
+            context['filter_groups'] = filter_form.filter_groups
+            # Решта характеристик поки показується як заглушка до наступного етапу.
+            context['placeholder_filter_groups'] = (
                 'Серія (модельний ряд)',
-                'Тип ноутбуку',
-                'Діагональ дисплея',
-                'Роздільна здатність',
-                'Тип матриці',
-                'Поверхня екрану',
-                'Частота оновлення екрану',
-                'Покоління процесора Intel',
-                'Покоління процесора AMD',
-                'Процесор',
-                'Кількість ядер процесора',
-                "Тип оперативної пам'яті",
-                "Об'єм оперативної пам'яті",
-                "Кількість слотів для оперативної пам'яті",
-                'Об’єм SSD',
-                'Тип відеокарти',
-                'Серія дискретної відеокарти',
-                'Об’єм відеопам’яті',
-                'Бездротові технології',
-                'Інтерфейси та підключення',
-                'Операційна система',
-                'Ємність акумулятора',
-                'Особливості',
-                'Вага',
-                'Колір',
             )
         return context
 
