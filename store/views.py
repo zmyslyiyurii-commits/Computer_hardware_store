@@ -28,6 +28,7 @@ class CategoryProductsView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         category = get_object_or_404(Category, pk=self.kwargs['category_id'])
+        context['categories'] = Category.objects.all()
         context['category'] = category
         # Для назви сторінки використовуємо узгоджену множину, навіть якщо
         # категорію в адмінці поки названо в однині.

@@ -24,7 +24,9 @@
     <header class="main-header">
         <div class="container header-row">
             <a class="logo" href="{% url 'home' %}" aria-label="NEXUS — на головну">NEXUS<span>.</span></a>
-            <a class="catalog-button" href="{% url 'home' %}#categories"><span class="menu-icon" aria-hidden="true">☰</span> Каталог</a>
+            <button class="catalog-button" type="button" aria-expanded="false" aria-controls="catalog-drawer">
+                <span class="menu-icon" aria-hidden="true">☰</span> Каталог
+            </button>
             <form class="search" role="search" action="{% url 'home' %}" method="get">
                 <input type="search" name="q" placeholder="Знайти ноутбук, відеокарту, аксесуар..." aria-label="Пошук товарів">
                 <button type="submit" aria-label="Шукати">⌕</button>
@@ -40,6 +42,8 @@
             </nav>
         </div>
     </header>
+
+    {% include 'category_catalog_drawer.html' %}
 
     <main class="page-container catalog-page">
         <div class="catalog-title">
@@ -153,5 +157,6 @@
             </section>
         </div>
     </main>
+    <script src="{% static 'catalog.js' %}" defer></script>
 </body>
 </html>

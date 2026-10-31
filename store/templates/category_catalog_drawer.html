@@ -1,0 +1,46 @@
+<div class="catalog-drawer" id="catalog-drawer" hidden>
+    <button class="catalog-drawer-backdrop" type="button" aria-label="Закрити каталог"></button>
+    <section class="catalog-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="catalog-drawer-title">
+        <div class="catalog-drawer-heading">
+            <div>
+                <p class="catalog-drawer-eyebrow">Знайди потрібну техніку</p>
+                <h2 id="catalog-drawer-title">Каталог товарів</h2>
+            </div>
+            <button class="catalog-drawer-close" type="button" aria-label="Закрити каталог">×</button>
+        </div>
+        <nav class="catalog-drawer-list" aria-label="Категорії товарів">
+            {% for category in categories %}
+                <a class="catalog-drawer-link" href="{% url 'category_products' category.pk %}">
+                    <span class="catalog-drawer-icon" aria-hidden="true">{{ category.icon|default:"▱" }}</span>
+                    <span class="catalog-drawer-link-copy">
+                        <strong>{{ category.name }}</strong>
+                        <small>
+                            {% if category.name|lower|slice:":7" == "ноутбук" %}
+                                Ноутбуки для роботи, навчання та ігор
+                            {% elif category.name == "Комп’ютери" %}
+                                Готові системи та комп’ютери для будь-яких задач
+                            {% elif category.name == "Комплектуючі для ПК" %}
+                                Процесори, відеокарти та компоненти
+                            {% elif category.name == "Монітори" %}
+                                Екрани для роботи, навчання та геймінгу
+                            {% elif category.name == "Периферія" %}
+                                Клавіатури, миші та аксесуари
+                            {% elif category.name == "Мережеве обладнання" %}
+                                Роутери, адаптери та мережеві пристрої
+                            {% elif category.name == "Накопичувачі" %}
+                                SSD, жорсткі диски та флешнакопичувачі
+                            {% elif category.name == "Аксесуари" %}
+                                Корисні доповнення до техніки
+                            {% else %}
+                                Техніка та аксесуари для твого робочого місця
+                            {% endif %}
+                        </small>
+                    </span>
+                    <span class="catalog-drawer-arrow" aria-hidden="true">↗</span>
+                </a>
+            {% empty %}
+                <p class="empty-categories">Категорій поки немає. Створіть їх через адмінпанель.</p>
+            {% endfor %}
+        </nav>
+    </section>
+</div>
