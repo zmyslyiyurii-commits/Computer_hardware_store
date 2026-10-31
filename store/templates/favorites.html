@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Обране — NEXUS</title>
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+    <link rel="stylesheet" href="{% static 'shop_pages.css' %}">
+</head>
+<body>
+    <header class="main-header">
+        <div class="container header-row">
+            <a class="logo" href="{% url 'home' %}">NEXUS<span>.</span></a>
+            <a class="shop-back-link" href="{% url 'home' %}">← Продовжити покупки</a>
+            <a class="header-action" href="{% url 'cart' %}">Кошик ({{ cart_count }})</a>
+        </div>
+    </header>
+    {% if messages %}<div class="container shop-messages">{% for message in messages %}<p>{{ message }}</p>{% endfor %}</div>{% endif %}
+    <main class="container shop-page">
+        <h1>Обране</h1>
+        {% if products %}
+            <div class="favorite-list">
+                {% for product in products %}
+                    <article class="favorite-item">
+                        <a class="cart-item-image" href="{% url 'product_detail' product.pk %}">
+                            {% if product.image_url %}<img src="{{ product.image_url }}" alt="{{ product.name }}">{% else %}<span>NEXUS</span>{% endif %}
+                        </a>
+                        <div class="cart-item-details">
+                            <span class="shop-muted">{{ product.category.name }}</span>
+                            <h2><a href="{% url 'product_detail' product.pk %}">{{ product.name }}</a></h2>
+                            <strong>{{ product.price|floatformat:"-2" }} ₴</strong>
+                            <div class="favorite-actions">
+                                {% if product.stock_quantity %}
+                                    <form method="post" action="{% url 'add_to_cart' product.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next_url" value="{% url 'favorites' %}">
+                                        <button class="shop-primary-button" type="submit">Додати до кошика</button>
+                                    </form>
+                                {% else %}
+                                    <span class="availability availability-out-of-stock">Немає в наявності</span>
+                                {% endif %}
+                                <form method="post" action="{% url 'toggle_favorite' product.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next_url" value="favorites">
+                                    <button class="shop-secondary-button" type="submit">Видалити з обраного</button>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <section class="shop-empty-state">
+                <span aria-hidden="true">♡</span>
+                <h2>Поки нічого не збережено</h2>
+                <p>Додавай товари в обране зі сторінки товару.</p>
+                <a class="shop-primary-button" href="{% url 'home' %}">Перейти до каталогу</a>
+            </section>
+        {% endif %}
+    </main>
+</body>
+</html>

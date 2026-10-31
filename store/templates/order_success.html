@@ -1,0 +1,21 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Замовлення прийнято — NEXUS</title>
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+    <link rel="stylesheet" href="{% static 'shop_pages.css' %}">
+</head>
+<body>
+    <main class="container shop-page">
+        <section class="shop-empty-state order-success">
+            <span aria-hidden="true">✓</span>
+            <h1>Дякуємо за замовлення!</h1>
+            <p>Замовлення №{{ order.pk }} прийнято. Ми зв’яжемося з тобою для підтвердження.</p>
+            <a class="shop-primary-button" href="{% url 'home' %}">Повернутися до магазину</a>
+        </section>
+    </main>
+</body>
+</html>

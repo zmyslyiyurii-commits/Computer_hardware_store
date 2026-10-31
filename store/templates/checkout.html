@@ -1,0 +1,44 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оформлення замовлення — NEXUS</title>
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+    <link rel="stylesheet" href="{% static 'shop_pages.css' %}">
+</head>
+<body>
+    <header class="main-header">
+        <div class="container header-row">
+            <a class="logo" href="{% url 'home' %}">NEXUS<span>.</span></a>
+            <a class="shop-back-link" href="{% url 'cart' %}">← Повернутися до кошика</a>
+        </div>
+    </header>
+    {% if messages %}<div class="container shop-messages">{% for message in messages %}<p>{{ message }}</p>{% endfor %}</div>{% endif %}
+    <main class="container shop-page">
+        <h1>Оформлення замовлення</h1>
+        <div class="checkout-layout">
+            <form class="checkout-form" method="post">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+                {% for field in form %}
+                    <div class="checkout-field">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {{ field.errors }}
+                    </div>
+                {% endfor %}
+                <button class="shop-primary-button" type="submit">Підтвердити замовлення</button>
+            </form>
+            <aside class="cart-summary">
+                <h2>Твоє замовлення</h2>
+                {% for item in items %}
+                    <p><span>{{ item.product.name }} × {{ item.quantity }}</span><strong>{{ item.subtotal|floatformat:"-2" }} ₴</strong></p>
+                {% endfor %}
+                <p class="cart-total"><span>Разом</span><strong>{{ total|floatformat:"-2" }} ₴</strong></p>
+            </aside>
+        </div>
+    </main>
+</body>
+</html>

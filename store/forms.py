@@ -24,6 +24,28 @@ class RegistrationForm(UserCreationForm):
         fields = ('username', 'last_name', 'email')
 
 
+class ProductReviewForm(forms.Form):
+    author_name = forms.CharField(label="Ім'я", max_length=100)
+    rating = forms.ChoiceField(
+        label='Оцінка',
+        choices=tuple((value, f'{value} зірок') for value in range(1, 6)),
+        widget=forms.RadioSelect,
+    )
+    text = forms.CharField(
+        label='Відгук',
+        widget=forms.Textarea(attrs={'rows': 4, 'placeholder': 'Поділися враженнями про товар'}),
+        min_length=5,
+        max_length=2000,
+    )
+
+
+class CheckoutForm(forms.Form):
+    customer_name = forms.CharField(label="Ім'я та прізвище", max_length=150)
+    phone = forms.CharField(label='Телефон', max_length=30)
+    email = forms.EmailField(label='Електронна пошта')
+    delivery_address = forms.CharField(label='Адреса доставки', max_length=255)
+
+
 class LaptopProductFilterForm(forms.Form):
     price_min = forms.DecimalField(
         label='Від',

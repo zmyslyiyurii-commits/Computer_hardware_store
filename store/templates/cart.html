@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кошик — NEXUS</title>
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+    <link rel="stylesheet" href="{% static 'shop_pages.css' %}">
+</head>
+<body>
+    <header class="main-header">
+        <div class="container header-row">
+            <a class="logo" href="{% url 'home' %}">NEXUS<span>.</span></a>
+            <a class="shop-back-link" href="{% url 'home' %}">← Продовжити покупки</a>
+            <a class="header-action" href="{% url 'favorites' %}">♡ Обране</a>
+        </div>
+    </header>
+    {% if messages %}<div class="container shop-messages">{% for message in messages %}<p>{{ message }}</p>{% endfor %}</div>{% endif %}
+    <main class="container shop-page">
+        <h1>Кошик</h1>
+        {% if items %}
+            <div class="cart-layout">
+                <section class="cart-items" aria-label="Товари у кошику">
+                    {% for item in items %}
+                        <article class="cart-item">
+                            <a class="cart-item-image" href="{% url 'product_detail' item.product.pk %}">
+                                {% if item.product.image_url %}<img src="{{ item.product.image_url }}" alt="{{ item.product.name }}">{% else %}<span>NEXUS</span>{% endif %}
+                            </a>
+                            <div class="cart-item-details">
+                                <span class="shop-muted">{{ item.product.category.name }}</span>
+                                <h2><a href="{% url 'product_detail' item.product.pk %}">{{ item.product.name }}</a></h2>
+                                {% if item.available %}
+                                    <p class="availability availability-in-stock">Є в наявності</p>
+                                {% else %}
+                                    <p class="availability availability-out-of-stock">Доступно: {{ item.product.stock_quantity }} шт. Змініть кількість, щоб оформити.</p>
+                                {% endif %}
+                                <form class="cart-quantity-form" method="post" action="{% url 'update_cart' item.product.pk %}">
+                                    {% csrf_token %}
+                                    <label for="quantity-{{ item.product.pk }}">Кількість</label>
+                                    <input id="quantity-{{ item.product.pk }}" type="number" name="quantity" min="0" max="{{ item.product.stock_quantity }}" value="{{ item.quantity }}">
+                                    <button type="submit">Оновити</button>
+                                    <span class="cart-item-subtotal">{{ item.subtotal|floatformat:"-2" }} ₴</span>
+                                </form>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </section>
+                <aside class="cart-summary">
+                    <h2>Разом</h2>
+                    <p><span>Товарів</span><strong>{{ cart_count }}</strong></p>
+                    <p class="cart-total"><span>До сплати</span><strong>{{ total|floatformat:"-2" }} ₴</strong></p>
+                    {% if can_checkout %}
+                        <a class="shop-primary-button" href="{% url 'checkout' %}">Перейти до оформлення</a>
+                    {% else %}
+                        <span class="checkout-unavailable">Перевір кількість товарів, щоб продовжити.</span>
+                    {% endif %}
+                    <small>Наявність і ціна будуть повторно перевірені перед оформленням.</small>
+                </aside>
+            </div>
+        {% else %}
+            <section class="shop-empty-state">
+                <span aria-hidden="true">▱</span>
+                <h2>Кошик поки порожній</h2>
+                <p>Додавай товари, які хочеш придбати.</p>
+                <a class="shop-primary-button" href="{% url 'home' %}">Перейти до каталогу</a>
+            </section>
+        {% endif %}
+    </main>
+</body>
+</html>

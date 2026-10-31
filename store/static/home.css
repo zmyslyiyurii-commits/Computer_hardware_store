@@ -566,6 +566,8 @@
         .product-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
         .price { font-size: 16px; font-weight: 800; letter-spacing: -.03em; }
         .add-button { width: 36px; height: 36px; border: 0; border-radius: 10px; color: var(--dark); background: var(--accent); font-size: 20px; cursor: pointer; }
+        .product-bottom form { margin: 0; }
+        .add-button:disabled { background: #e6e9e3; color: #929a91; cursor: not-allowed; }
         .rating { margin-top: 8px; color: #87918b; font-size: 10px; }
         .rating span { color: #d79d24; }
 

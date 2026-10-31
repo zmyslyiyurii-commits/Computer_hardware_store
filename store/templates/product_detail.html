@@ -1,0 +1,286 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f6f7f4">
+    <title>{{ product.name }} — NEXUS</title>
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+    <link rel="stylesheet" href="{% static 'product_detail.css' %}">
+</head>
+<body>
+    <div class="topline">
+        <div class="container topline-inner">
+            <span>Техніка для роботи, гри й натхнення</span>
+            <nav class="topline-links" aria-label="Додаткова навігація">
+                <a href="{% url 'home' %}#service">Доставка та оплата</a>
+                <a href="{% url 'home' %}#service">Гарантія</a>
+                <a href="{% url 'home' %}#contacts">Контакти</a>
+            </nav>
+        </div>
+    </div>
+
+    <header class="main-header">
+        <div class="container header-row">
+            <a class="logo" href="{% url 'home' %}" aria-label="NEXUS — на головну">NEXUS<span>.</span></a>
+            <button class="catalog-button" type="button" aria-expanded="false" aria-controls="catalog-drawer">
+                <span class="menu-icon" aria-hidden="true">☰</span> Каталог
+            </button>
+            <form class="search" role="search" action="{% url 'home' %}" method="get">
+                <input type="search" name="q" placeholder="Знайти ноутбук, відеокарту, аксесуар..." aria-label="Пошук товарів">
+                <button type="submit" aria-label="Шукати">⌕</button>
+            </form>
+            <nav class="header-actions" aria-label="Особисті розділи">
+                <a class="header-action" href="{% url 'favorites' %}"><span class="action-icon" aria-hidden="true">♡</span><span>Обране</span></a>
+                {% if user.is_authenticated %}
+                    <a class="header-action" href="{% url 'profile' %}"><span class="action-icon" aria-hidden="true">♙</span><span>Привіт, {{ user.username }}</span></a>
+                {% else %}
+                    <a class="header-action" href="{% url 'login' %}"><span class="action-icon" aria-hidden="true">♙</span><span>Увійти</span></a>
+                {% endif %}
+                <a class="header-action" href="{% url 'cart' %}"><span class="action-icon cart-icon" aria-hidden="true">▱<span class="cart-count">{{ cart_count }}</span></span><span>Кошик</span></a>
+            </nav>
+        </div>
+    </header>
+
+    {% include 'category_catalog_drawer.html' %}
+
+    {% if messages %}
+        <div class="container site-messages" aria-live="polite">
+            {% for message in messages %}<p class="site-message">{{ message }}</p>{% endfor %}
+        </div>
+    {% endif %}
+
+    <main class="container product-detail-page">
+        <section class="product-detail">
+            <div class="product-detail-gallery">
+                <div class="product-detail-image">
+                    {% if product.image_url %}
+                        <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                    {% else %}
+                        <span class="product-placeholder" aria-hidden="true">NEXUS</span>
+                    {% endif %}
+                    {% if product.badge %}<span class="badge product-detail-badge">{{ product.badge }}</span>{% endif %}
+                </div>
+
+                <details class="product-description-section">
+                    <summary>
+                        <span>Опис товару</span>
+                        <span class="disclosure-hint">{% if product.description %}Читати повний опис{% else %}Опис ще не додано{% endif %}</span>
+                        <span class="disclosure-chevron" aria-hidden="true">⌄</span>
+                    </summary>
+                    {% if product.description %}
+                        <div class="product-description">{{ product.description|linebreaks }}</div>
+                    {% else %}
+                        <p class="product-description-empty">Опис товару незабаром буде додано.</p>
+                    {% endif %}
+                </details>
+            </div>
+
+            <div class="product-detail-info">
+                <span class="product-detail-category">{{ product.category.name }}</span>
+                <h1>{{ product.name }}</h1>
+                <div class="product-social-proof">
+                    {% if review_count %}
+                        <span class="rating-stars" aria-label="Рейтинг {{ average_rating|floatformat:1 }} з 5">
+                            {% for star in '12345' %}
+                                {% if forloop.counter <= rating_stars %}★{% else %}☆{% endif %}
+                            {% endfor %}
+                        </span>
+                        <span>{{ average_rating|floatformat:1 }} · {{ review_count }} відгуків</span>
+                    {% else %}
+                        <span class="rating-stars" aria-label="Поки немає оцінок">☆☆☆☆☆</span>
+                        <span>Поки немає відгуків</span>
+                    {% endif %}
+                    <span class="product-code">Код товару: {{ product.product_code }}</span>
+                </div>
+                <div class="product-purchase-panel">
+                    <span class="product-price">{{ product.price|floatformat:"-2" }} ₴</span>
+                    {% if product.stock_quantity > 0 %}
+                        <p class="availability availability-in-stock"><span aria-hidden="true">●</span> Є в наявності</p>
+                    {% else %}
+                        <p class="availability availability-out-of-stock"><span aria-hidden="true">●</span> Немає в наявності</p>
+                    {% endif %}
+                    <div class="product-purchase-actions">
+                        <form class="cart-action-form" method="post" action="{% url 'add_to_cart' product.pk %}">
+                            {% csrf_token %}
+                            <button class="product-add-to-cart" type="submit" {% if not product.stock_quantity %}disabled{% endif %}>Додати до кошика</button>
+                            <button class="product-buy-now" type="submit" name="buy_now" value="1" {% if not product.stock_quantity %}disabled{% endif %}>Оформити замовлення</button>
+                        </form>
+                        <form class="favorite-action-form" method="post" action="{% url 'toggle_favorite' product.pk %}">
+                            {% csrf_token %}
+                            <button class="favorite-toggle{% if is_favorite %} is-favorite{% endif %}" type="submit" aria-label="{% if is_favorite %}Видалити з обраного{% else %}Додати в обране{% endif %}">
+                                {% if is_favorite %}♥{% else %}♡{% endif %}
+                            </button>
+                        </form>
+                    </div>
+                    <a class="product-category-link" href="{% url 'category_products' product.category.pk %}">
+                        Переглянути категорію <span aria-hidden="true">↗</span>
+                    </a>
+                </div>
+
+                {% if specifications %}
+                    <section class="product-quick-specifications" aria-labelledby="quick-specifications-title">
+                        <div class="quick-specifications-heading">
+                            <h2 id="quick-specifications-title">Коротко про головне</h2>
+                            <span>{{ specifications|length }} параметрів</span>
+                        </div>
+                        <dl>
+                            {% for label, value in specifications %}
+                                {% if forloop.counter <= 5 %}
+                                    <div class="quick-specification-row">
+                                        <dt>{{ label }}</dt>
+                                        <dd>{{ value|linebreaksbr }}</dd>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </dl>
+                        <button class="all-specifications-button" type="button" data-open-specifications>
+                            Усі характеристики <span aria-hidden="true">↗</span>
+                        </button>
+                    </section>
+                {% endif %}
+
+                {% if specifications %}
+                    <dialog class="specifications-dialog" aria-labelledby="specifications-title">
+                        <div class="specifications-dialog-header">
+                            <div>
+                                <span class="product-detail-category">{{ product.category.name }}</span>
+                                <h2 id="specifications-title">Характеристики</h2>
+                            </div>
+                            <button class="specifications-dialog-close" type="button" aria-label="Закрити характеристики">×</button>
+                        </div>
+                        <dl class="specifications-list">
+                            {% for label, value in specifications %}
+                                <div class="specification-row">
+                                    <dt>{{ label }}</dt>
+                                    <dd>{{ value|linebreaksbr }}</dd>
+                                </div>
+                            {% endfor %}
+                        </dl>
+                    </dialog>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="product-reviews" id="reviews" aria-labelledby="reviews-title">
+            <div class="reviews-content">
+                <div class="reviews-heading">
+                    <span class="reviews-eyebrow">Враження покупців</span>
+                    <h2 id="reviews-title">Відгуки про товар</h2>
+                    {% if review_count %}
+                        <p><span class="rating-stars" aria-hidden="true">★</span> {{ average_rating|floatformat:1 }} з 5 <span class="review-count">· {{ review_count }} відгуків</span></p>
+                    {% else %}
+                        <p>Ще немає відгуків. Поділися першим враженням про цей товар.</p>
+                    {% endif %}
+                </div>
+                {% if reviews %}
+                    <div class="review-list">
+                        {% for review in reviews %}
+                            <article class="review-card">
+                                <div class="review-card-heading">
+                                    <strong>{{ review.author_name }}</strong>
+                                    <span class="rating-stars" aria-label="{{ review.rating }} з 5">
+                                        {% for star in '12345' %}
+                                            {% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}
+                                        {% endfor %}
+                                    </span>
+                                </div>
+                                <p>{{ review.text|linebreaksbr }}</p>
+                                <time datetime="{{ review.created_at|date:'c' }}">{{ review.created_at|date:'d.m.Y' }}</time>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="reviews-empty">
+                        <span aria-hidden="true">✦</span>
+                        <p>Тут з’являться відгуки після публікації модератором.</p>
+                    </div>
+                {% endif %}
+            </div>
+            <form class="review-form" method="post" action="{% url 'product_detail' product.pk %}#reviews">
+                {% csrf_token %}
+                <div class="review-form-heading">
+                    <h3>Залишити відгук</h3>
+                    <p>Оціни товар і розкажи, що думаєш</p>
+                </div>
+                {{ review_form.non_field_errors }}
+                <label for="{{ review_form.author_name.id_for_label }}">{{ review_form.author_name.label }}</label>
+                {{ review_form.author_name }}
+                {{ review_form.author_name.errors }}
+                <fieldset>
+                    <legend>{{ review_form.rating.label }}</legend>
+                    <div class="rating-options">
+                        {% for radio in review_form.rating %}
+                            <label class="rating-choice" title="{{ radio.choice_label }}">
+                                {{ radio.tag }}
+                                <span aria-hidden="true">{% for star in '12345' %}{% if forloop.counter <= forloop.parentloop.counter %}★{% endif %}{% endfor %}</span>
+                                <span class="visually-hidden">{{ radio.choice_label }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                    {{ review_form.rating.errors }}
+                </fieldset>
+                <label for="{{ review_form.text.id_for_label }}">{{ review_form.text.label }}</label>
+                {{ review_form.text }}
+                {{ review_form.text.errors }}
+                <button class="product-add-to-cart" type="submit">Надіслати відгук <span aria-hidden="true">↗</span></button>
+                <p class="review-moderation-note">Відгук з’явиться на сайті після перевірки модератором.</p>
+            </form>
+        </section>
+
+        {% if related_products %}
+            <section class="related-products" aria-labelledby="related-products-title">
+                <div class="section-heading">
+                    <div>
+                        <h2 id="related-products-title">Інші товари категорії</h2>
+                        <p>{{ product.category.name }}</p>
+                    </div>
+                    <a class="text-link" href="{% url 'category_products' product.category.pk %}">Усі товари&nbsp; ↗</a>
+                </div>
+                <div class="product-grid">
+                    {% for related in related_products %}
+                        <article class="product-card">
+                            <div class="product-badge-slot">
+                                {% if related.badge %}<span class="badge">{{ related.badge }}</span>{% endif %}
+                            </div>
+                            <a class="product-image product-image-link" href="{% url 'product_detail' related.pk %}" aria-label="Детальніше про {{ related.name }}">
+                                {% if related.image_url %}
+                                    <img src="{{ related.image_url }}" alt="{{ related.name }}">
+                                {% else %}
+                                    <span class="product-placeholder" aria-hidden="true">NEXUS</span>
+                                {% endif %}
+                            </a>
+                            <div class="product-info">
+                                <span class="product-type">{{ related.category.name }}</span>
+                                <h3 class="product-name"><a href="{% url 'product_detail' related.pk %}">{{ related.name }}</a></h3>
+                                    <div class="product-bottom">
+                                        <span class="price">{{ related.price|floatformat:"-2" }} ₴</span>
+                                        {% if related.stock_quantity %}
+                                            <form method="post" action="{% url 'add_to_cart' related.pk %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="next_url" value="{{ request.get_full_path }}">
+                                                <button class="add-button" type="submit" aria-label="Додати {{ related.name }} у кошик">+</button>
+                                            </form>
+                                        {% else %}
+                                            <button class="add-button" type="button" disabled aria-label="{{ related.name }} немає в наявності">+</button>
+                                        {% endif %}
+                                    </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+    </main>
+
+    <footer id="contacts">
+        <div class="container footer-inner">
+            <a class="footer-brand" href="{% url 'home' %}">NEXUS<span>.</span></a>
+            <span>Магазин комп'ютерної техніки</span>
+            <span>© 2026 NEXUS. Усі права захищені.</span>
+        </div>
+    </footer>
+    <script src="{% static 'catalog.js' %}" defer></script>
+</body>
+</html>

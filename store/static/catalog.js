@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    initializeSpecificationDialog();
     const toggle = document.querySelector('.catalog-button');
     const drawer = document.querySelector('#catalog-drawer');
 
@@ -72,6 +73,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeCarousels();
 });
+
+function initializeSpecificationDialog() {
+    const dialog = document.querySelector('.specifications-dialog');
+    const openButton = document.querySelector('[data-open-specifications]');
+    const closeButton = dialog
+        ? dialog.querySelector('.specifications-dialog-close')
+        : null;
+
+    if (!dialog || !openButton || !closeButton) {
+        return;
+    }
+
+    openButton.addEventListener('click', () => dialog.showModal());
+    closeButton.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) {
+            dialog.close();
+        }
+    });
+}
 
 function initializeCarousels() {
     document.querySelectorAll('.carousel-track').forEach((track) => {
