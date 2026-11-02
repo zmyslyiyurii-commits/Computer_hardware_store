@@ -1,6 +1,6 @@
 from django.contrib import admin, messages
 from django.utils.html import format_html, format_html_join
-from store.models import Category, Order, OrderItem, Product, ProductImage, Review
+from store.models import Category, CustomerProfile, Order, OrderItem, Product, ProductImage, Review
 
 
 # Налаштування керування категоріями в адмінці Django.
@@ -9,6 +9,12 @@ class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'icon')
     search_fields = ('name',)
     ordering = ('name',)
+
+
+@admin.register(CustomerProfile)
+class CustomerProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'phone')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'phone')
 
 
 # Дає змогу шукати товари, фільтрувати їх і змінювати публікацію зі списку.

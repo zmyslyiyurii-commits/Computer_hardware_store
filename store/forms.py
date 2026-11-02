@@ -46,6 +46,13 @@ class CheckoutForm(forms.Form):
     delivery_address = forms.CharField(label='Адреса доставки', max_length=255)
 
 
+class ProfileDetailsForm(forms.Form):
+    first_name = forms.CharField(label="Ім'я", max_length=150, required=False)
+    last_name = forms.CharField(label='Прізвище', max_length=150, required=False)
+    email = forms.EmailField(label='Електронна пошта', required=False)
+    phone = forms.CharField(label='Телефон', max_length=30, required=False)
+
+
 class LaptopProductFilterForm(forms.Form):
     price_min = forms.DecimalField(
         label='Від',

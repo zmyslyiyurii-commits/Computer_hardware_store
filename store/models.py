@@ -1,4 +1,5 @@
 from django.core.validators import MinValueValidator
+from django.contrib.auth.models import User
 from django.db import models, transaction
 from django.db.models import F
 
@@ -123,6 +124,23 @@ class ProductImage(models.Model):
         return self.alt_text or f'Фото: {self.product.name}'
 
 
+class CustomerProfile(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='customer_profile',
+        verbose_name='Користувач',
+    )
+    phone = models.CharField('Телефон', max_length=30, blank=True)
+
+    class Meta:
+        verbose_name = 'профіль покупця'
+        verbose_name_plural = 'профілі покупців'
+
+    def __str__(self):
+        return f'Профіль: {self.user.username}'
+
+
 class Review(models.Model):
     product = models.ForeignKey(
         Product,
@@ -160,6 +178,14 @@ class Order(models.Model):
     )
 
     customer_name = models.CharField('Ім’я та прізвище', max_length=150)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='store_orders',
+        null=True,
+        blank=True,
+        verbose_name='Акаунт покупця',
+    )
     phone = models.CharField('Телефон', max_length=30)
     email = models.EmailField('Електронна пошта')
     delivery_address = models.CharField('Адреса доставки', max_length=255)

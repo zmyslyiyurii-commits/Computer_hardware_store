@@ -5,58 +5,210 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#f6f7f4">
+    <title>Особистий кабінет — NEXUS</title>
+    <link rel="stylesheet" href="{% static 'home.css' %}">
     <link rel="stylesheet" href="{% static 'profile.css' %}">
-    <title>Мій профіль — NEXUS</title>
+    <link rel="stylesheet" href="{% static 'shop_pages.css' %}">
 </head>
 <body>
-    <header class="profile-header">
-        <a class="logo" href="{% url 'home' %}" aria-label="NEXUS — на головну">NEXUS<span>.</span></a>
-        <a class="back-link" href="{% url 'home' %}"><span aria-hidden="true">←</span> До магазину</a>
-    </header>
-
-    <main class="profile-layout">
-        <div class="profile-heading">
-            <span class="eyebrow">ОСОБИСТИЙ КАБІНЕТ</span>
-            <h1>Мій профіль</h1>
-            <p>Тут зібрана інформація про твій акаунт.</p>
+    <div class="topline">
+        <div class="container topline-inner">
+            <span>Техніка для роботи, гри й натхнення</span>
+            <nav class="topline-links" aria-label="Додаткова навігація">
+                <a href="{% url 'home' %}#service">Доставка та оплата</a>
+                <a href="{% url 'home' %}#service">Гарантія</a>
+                <a href="{% url 'home' %}#contacts">Контакти</a>
+            </nav>
         </div>
+    </div>
+    <header class="main-header">
+        <div class="container header-row">
+            <a class="logo" href="{% url 'home' %}" aria-label="NEXUS — на головну">NEXUS<span>.</span></a>
+            <button class="catalog-button" type="button" aria-expanded="false" aria-controls="catalog-drawer">
+                <span class="menu-icon" aria-hidden="true">☰</span> Каталог
+            </button>
+            <form class="search" role="search" action="{% url 'home' %}" method="get">
+                <input type="search" name="q" placeholder="Знайти ноутбук, відеокарту, аксесуар..." aria-label="Пошук товарів">
+                <button type="submit" aria-label="Шукати">⌕</button>
+            </form>
+            <nav class="header-actions" aria-label="Особисті розділи">
+                <a class="header-action" href="{% url 'favorites' %}"><span class="action-icon" aria-hidden="true">♡</span><span>Обране</span></a>
+                <a class="header-action" href="{% url 'profile' %}"><span class="action-icon" aria-hidden="true">♙</span><span>{{ user.username }}</span></a>
+                <a class="header-action" href="{% url 'cart' %}"><span class="action-icon cart-icon" aria-hidden="true">▱<span class="cart-count">{{ cart_count }}</span></span><span>Кошик</span></a>
+            </nav>
+        </div>
+    </header>
+    {% include 'category_catalog_drawer.html' %}
 
-        <section class="profile-card" aria-labelledby="account-title">
-            <div class="account-heading">
-                <div class="avatar" aria-hidden="true">{{ user.username|first|upper }}</div>
-                <div>
-                    <span class="account-label">ТВІЙ АКАУНТ</span>
-                    <h2 id="account-title">{{ user.username }}</h2>
-                </div>
-            </div>
+    {% if messages %}
+        <div class="container shop-messages" aria-live="polite">
+            {% for message in messages %}<p>{{ message }}</p>{% endfor %}
+        </div>
+    {% endif %}
 
-            <dl class="account-details">
-                <div class="detail-row">
-                    <dt>Ім’я користувача</dt>
-                    <dd>{{ user.username }}</dd>
+    <main class="container account-layout">
+        <aside class="account-sidebar">
+            <section class="account-identity">
+                <div class="account-avatar" aria-hidden="true">{{ user.first_name|default:user.username|first|upper }}</div>
+                <div class="account-identity-copy">
+                    <strong>{{ user.get_full_name|default:user.username }}</strong>
+                    <span>{{ user.email|default:"Додай електронну пошту" }}</span>
                 </div>
-                <div class="detail-row">
-                    <dt>Прізвище</dt>
-                    <dd>{% if user.last_name %}{{ user.last_name }}{% else %}<span class="detail-muted">Не вказане</span>{% endif %}</dd>
-                </div>
-                <div class="detail-row">
-                    <dt>Електронна пошта</dt>
-                    <dd>{% if user.email %}{{ user.email }}{% else %}<span class="detail-muted">Не вказана</span>{% endif %}</dd>
-                </div>
-                <div class="detail-row">
-                    <dt>Дата реєстрації</dt>
-                    <dd>{{ user.date_joined|date:"d.m.Y" }}</dd>
-                </div>
-            </dl>
-
-            <div class="profile-footer">
-                <p>Додаткові налаштування профілю з’являться тут.</p>
+            </section>
+            <nav class="account-navigation" aria-label="Розділи особистого кабінету">
+                <a class="account-nav-link{% if section == 'orders' %} is-active{% endif %}" href="{% url 'profile' %}?section=orders"><span aria-hidden="true">▤</span>Мої замовлення</a>
+                <a class="account-nav-link{% if section == 'favorites' %} is-active{% endif %}" href="{% url 'profile' %}?section=favorites"><span aria-hidden="true">♡</span>Обране <span class="account-nav-count">{{ favorites_count }}</span></a>
+                <a class="account-nav-link{% if section == 'personal' %} is-active{% endif %}" href="{% url 'profile' %}?section=personal"><span aria-hidden="true">♙</span>Персональні дані</a>
+            </nav>
+            <div class="account-sidebar-footer">
+                <span>З нами з {{ user.date_joined|date:"d.m.Y" }}</span>
                 <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}
-                    <button class="logout-button" type="submit"><span aria-hidden="true">↪</span> Вийти з акаунту</button>
+                    <button class="account-logout" type="submit">Вийти з акаунту <span aria-hidden="true">↗</span></button>
                 </form>
             </div>
-        </section>
+        </aside>
+
+        <div class="account-main">
+            {% if section == 'orders' %}
+            <section class="account-section" id="orders" aria-labelledby="orders-title">
+                <div class="account-section-heading">
+                    <div>
+                        <span class="account-eyebrow">Історія покупок</span>
+                        <h1 id="orders-title">Мої замовлення</h1>
+                    </div>
+                    <span class="account-section-total">{{ orders|length }} у списку</span>
+                </div>
+                <nav class="order-filters" aria-label="Фільтр замовлень">
+                    <a class="{% if order_status == 'all' %}is-selected{% endif %}" href="{% url 'profile' %}?section=orders&amp;orders=all#orders">Усі</a>
+                    <a class="{% if order_status == 'active' %}is-selected{% endif %}" href="{% url 'profile' %}?section=orders&amp;orders=active#orders">Активні <span>{{ active_orders_count }}</span></a>
+                    <a class="{% if order_status == 'completed' %}is-selected{% endif %}" href="{% url 'profile' %}?section=orders&amp;orders=completed#orders">Виконані <span>{{ completed_orders_count }}</span></a>
+                    <a class="{% if order_status == 'cancelled' %}is-selected{% endif %}" href="{% url 'profile' %}?section=orders&amp;orders=cancelled#orders">Скасовані <span>{{ cancelled_orders_count }}</span></a>
+                </nav>
+
+                {% if orders %}
+                    <div class="account-order-list">
+                        {% for order in orders %}
+                            <article class="account-order-card">
+                                <div class="account-order-topline">
+                                    <div>
+                                        <span class="account-order-number">Замовлення №{{ order.pk }}</span>
+                                        <time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d.m.Y, H:i" }}</time>
+                                    </div>
+                                    <span class="order-status status-{{ order.status }}">{{ order.get_status_display }}</span>
+                                </div>
+                                <div class="account-order-items">
+                                    {% for item in order.items.all %}
+                                        <a class="account-order-item" href="{% url 'product_detail' item.product_id %}">
+                                            <span class="account-order-item-name">{{ item.product_name }}</span>
+                                            <span class="account-order-item-category">{{ item.product.category.name }}</span>
+                                            <span class="account-order-item-quantity">{{ item.quantity }} шт.</span>
+                                            <strong>{{ item.unit_price|floatformat:"-2" }} ₴</strong>
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                                <div class="account-order-bottom">
+                                    <span>{{ order.delivery_address }}</span>
+                                    <strong>Разом: {{ order.total|floatformat:"-2" }} ₴</strong>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="account-empty-state">
+                        <span aria-hidden="true">▤</span>
+                        {% if order_status == 'all' %}
+                            <h2>Замовлень поки немає</h2>
+                            <p>Тут з’явиться історія покупок, оформлених після входу в цей акаунт.</p>
+                            <a class="shop-primary-button" href="{% url 'home' %}">Перейти до каталогу</a>
+                        {% else %}
+                            <h2>У цьому розділі поки порожньо</h2>
+                            <p>Замовлень із таким статусом немає.</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </section>
+            {% elif section == 'favorites' %}
+            <section class="account-section" id="favorites" aria-labelledby="favorites-title">
+                <div class="account-section-heading">
+                    <div>
+                        <span class="account-eyebrow">Збережені товари</span>
+                        <h1 id="favorites-title">Обране</h1>
+                    </div>
+                    <span class="account-section-total">{{ favorites_count }} товарів</span>
+                </div>
+                {% if favorite_products %}
+                    <div class="favorite-list">
+                        {% for product in favorite_products %}
+                            <article class="favorite-item">
+                                <a class="cart-item-image" href="{% url 'product_detail' product.pk %}">
+                                    {% if product.image_url %}<img src="{{ product.image_url }}" alt="{{ product.name }}">{% else %}<span>NEXUS</span>{% endif %}
+                                </a>
+                                <div class="cart-item-details">
+                                    <span class="shop-muted">{{ product.category.name }}</span>
+                                    <h2><a href="{% url 'product_detail' product.pk %}">{{ product.name }}</a></h2>
+                                    <strong>{{ product.price|floatformat:"-2" }} ₴</strong>
+                                    <div class="favorite-actions">
+                                        {% if product.stock_quantity %}
+                                            <form method="post" action="{% url 'add_to_cart' product.pk %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="next_url" value="{% url 'profile' %}?section=favorites">
+                                                <button class="shop-primary-button" type="submit">Додати до кошика</button>
+                                            </form>
+                                        {% else %}
+                                            <span class="availability availability-out-of-stock">Немає в наявності</span>
+                                        {% endif %}
+                                        <form method="post" action="{% url 'toggle_favorite' product.pk %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next_url" value="account_favorites">
+                                            <button class="shop-secondary-button" type="submit">Прибрати з обраного</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="account-empty-state">
+                        <span aria-hidden="true">♡</span>
+                        <h2>Обране поки порожнє</h2>
+                        <p>Зберігай товари, щоб повернутися до них пізніше.</p>
+                        <a class="shop-primary-button" href="{% url 'home' %}">Перейти до каталогу</a>
+                    </div>
+                {% endif %}
+            </section>
+
+            {% else %}
+            <section class="account-section personal-data-section" id="personal-data" aria-labelledby="personal-data-title">
+                <div class="account-section-heading">
+                    <div>
+                        <span class="account-eyebrow">Налаштування акаунта</span>
+                        <h2 id="personal-data-title">Персональні дані</h2>
+                    </div>
+                </div>
+                <form class="account-details-form" method="post">
+                    {% csrf_token %}
+                    {{ profile_form.non_field_errors }}
+                    <div class="account-form-grid">
+                        {% for field in profile_form %}
+                            <div class="account-form-field">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {{ field.errors }}
+                            </div>
+                        {% endfor %}
+                        <div class="account-form-field">
+                            <label>Ім’я користувача</label>
+                            <input type="text" value="{{ user.username }}" disabled>
+                            <small>Логін не можна змінити тут.</small>
+                        </div>
+                    </div>
+                    <button class="shop-primary-button" type="submit">Зберегти зміни</button>
+                </form>
+            </section>
+            {% endif %}
+        </div>
     </main>
+    <script src="{% static 'catalog.js' %}" defer></script>
 </body>
 </html>

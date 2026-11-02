@@ -12,8 +12,14 @@ from django.contrib.auth.views import LoginView as DjangoLoginView
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, TemplateView
-from store.forms import CheckoutForm, LaptopProductFilterForm, ProductReviewForm, RegistrationForm
-from store.models import Category, Order, OrderItem, Product, Review
+from store.forms import (
+    CheckoutForm,
+    LaptopProductFilterForm,
+    ProductReviewForm,
+    ProfileDetailsForm,
+    RegistrationForm,
+)
+from store.models import Category, CustomerProfile, Order, OrderItem, Product, Review
 
 
 def _session_cart(request):
@@ -333,7 +339,20 @@ def checkout_view(request):
         messages.error(request, 'Перевір доступну кількість товарів у кошику.')
         return redirect('cart')
 
-    form = CheckoutForm(request.POST if request.method == 'POST' else None)
+    initial = {}
+    if request.user.is_authenticated:
+        profile = getattr(request.user, 'customer_profile', None)
+        initial = {
+            'customer_name': ' '.join(
+                name for name in (request.user.first_name, request.user.last_name) if name
+            ) or request.user.username,
+            'email': request.user.email,
+            'phone': profile.phone if profile else '',
+        }
+    form = CheckoutForm(
+        request.POST if request.method == 'POST' else None,
+        initial=initial if request.method != 'POST' else None,
+    )
     if request.method == 'POST' and form.is_valid():
         product_ids = [item['product'].pk for item in items]
         with transaction.atomic():
@@ -359,6 +378,7 @@ def checkout_view(request):
             order = Order.objects.create(
                 **form.cleaned_data,
                 total=order_total,
+                user=request.user if request.user.is_authenticated else None,
             )
             for item in items:
                 product = locked_products[item['product'].pk]
@@ -409,6 +429,8 @@ def toggle_favorite_view(request, product_id):
     request.session['favorites'] = favorites
     if request.POST.get('next_url') == 'favorites':
         return redirect('favorites')
+    if request.POST.get('next_url') == 'account_favorites':
+        return redirect(f'{reverse_lazy("profile")}?section=favorites')
     return redirect('product_detail', product_id=product.pk)
 
 
@@ -429,6 +451,68 @@ def favorites_view(request):
 
 class ProfileView(LoginRequiredMixin, TemplateView):
     template_name = 'profile.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        profile, _ = CustomerProfile.objects.get_or_create(user=user)
+        orders = user.store_orders.prefetch_related('items__product__category')
+        section = self.request.GET.get('section', 'orders')
+        if section not in ('orders', 'favorites', 'personal'):
+            section = 'orders'
+        order_status = self.request.GET.get('orders', 'all')
+        if order_status == 'active':
+            displayed_orders = orders.filter(status__in=('new', 'processing'))
+        elif order_status in ('completed', 'cancelled'):
+            displayed_orders = orders.filter(status=order_status)
+        else:
+            order_status = 'all'
+            displayed_orders = orders
+        favorite_ids = self.request.session.get('favorites', [])
+        if not isinstance(favorite_ids, list):
+            favorite_ids = []
+        favorite_ids = [value for value in favorite_ids if str(value).isdigit()]
+        context.update({
+            'section': section,
+            'profile_form': ProfileDetailsForm(initial={
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+                'phone': profile.phone,
+            }),
+            'orders': displayed_orders,
+            'order_status': order_status,
+            'active_orders_count': orders.filter(status__in=('new', 'processing')).count(),
+            'completed_orders_count': orders.filter(status='completed').count(),
+            'cancelled_orders_count': orders.filter(status='cancelled').count(),
+            'favorite_products': Product.objects.filter(
+                pk__in=[int(value) for value in favorite_ids],
+                is_active=True,
+            ).select_related('category'),
+            'favorites_count': len(favorite_ids),
+            'cart_count': _cart_count(self.request),
+            'categories': Category.objects.all(),
+        })
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = ProfileDetailsForm(request.POST)
+        if form.is_valid():
+            user = request.user
+            user.first_name = form.cleaned_data['first_name']
+            user.last_name = form.cleaned_data['last_name']
+            user.email = form.cleaned_data['email']
+            user.save(update_fields=('first_name', 'last_name', 'email'))
+            profile, _ = CustomerProfile.objects.get_or_create(user=user)
+            profile.phone = form.cleaned_data['phone']
+            profile.save(update_fields=('phone',))
+            messages.success(request, 'Персональні дані збережено.')
+            return redirect(f'{reverse_lazy("profile")}?section=personal#personal-data')
+
+        context = self.get_context_data(**kwargs)
+        context['section'] = 'personal'
+        context['profile_form'] = form
+        return self.render_to_response(context, status=400)
 
 
 class LoginView(DjangoLoginView):
