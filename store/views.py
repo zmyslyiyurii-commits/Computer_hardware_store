@@ -123,42 +123,66 @@ class CategoryProductsView(TemplateView):
 
             context['laptop_filter_form'] = filter_form
             context['filter_groups'] = filter_form.filter_groups
-            # Решта характеристик поки показується як заглушка до наступного етапу.
-            context['placeholder_filter_groups'] = (
-                'Серія (модельний ряд)',
-            )
         return context
 
 
 class ProductDetailView(TemplateView):
     template_name = 'product_detail.html'
 
-    specification_fields = (
-        'manufacturer',
-        'laptop_type',
-        'display_diagonal',
-        'resolution',
-        'matrix_type',
-        'screen_surface',
-        'refresh_rate',
-        'intel_generation',
-        'amd_generation',
-        'processor',
-        'processor_cores',
-        'ram_type',
-        'ram_capacity',
-        'ram_slots',
-        'ssd_capacity',
-        'graphics_type',
-        'discrete_graphics_series',
-        'video_memory',
-        'wireless_technologies',
-        'interfaces',
-        'operating_system',
-        'battery_capacity',
-        'features',
-        'weight',
-        'color',
+    specification_groups = (
+        ('Основні характеристики', (
+            'manufacturer',
+            'model_series',
+            'laptop_type',
+            'color',
+        )),
+        ('Дисплей', (
+            'display_diagonal',
+            'resolution',
+            'matrix_type',
+            'screen_surface',
+            'refresh_rate',
+        )),
+        ('Процесор', (
+            'intel_generation',
+            'amd_generation',
+            'processor',
+            'processor_cores',
+        )),
+        ("Оперативна пам'ять", (
+            'ram_type',
+            'ram_capacity',
+            'ram_slots',
+        )),
+        ('Система зберігання даних', (
+            'ssd_capacity',
+        )),
+        ('Відеокарта', (
+            'graphics_type',
+            'discrete_graphics_series',
+            'video_memory',
+        )),
+        ('Комунікації та інтерфейси', (
+            'wireless_technologies',
+            'interfaces',
+        )),
+        ('Мультимедіа та додаткові можливості', (
+            'webcam',
+            'additional_features',
+            'features',
+        )),
+        ('Програмне забезпечення та живлення', (
+            'operating_system',
+            'battery_capacity',
+        )),
+        ('Корпус та гарантія', (
+            'width',
+            'height',
+            'depth',
+            'weight',
+            'country_of_origin',
+            'warranty_months',
+        )),
     )
 
     def get_context_data(self, **kwargs):
@@ -171,10 +195,40 @@ class ProductDetailView(TemplateView):
         context['product'] = product
         context['categories'] = Category.objects.all()
         context['cart_count'] = _cart_count(self.request)
+        context['product_images'] = [
+            {
+                'url': image.image_url,
+                'alt': image.alt_text or product.name,
+            }
+            for image in product.gallery_images.all()
+        ]
+        if product.image_url and all(
+            image['url'] != product.image_url
+            for image in context['product_images']
+        ):
+            context['product_images'].insert(0, {
+                'url': product.image_url,
+                'alt': product.name,
+            })
+        context['specification_groups'] = [
+            {
+                'name': group_name,
+                'items': [
+                    (product._meta.get_field(field_name).verbose_name, getattr(product, field_name))
+                    for field_name in field_names
+                    if getattr(product, field_name) not in (None, '')
+                ],
+            }
+            for group_name, field_names in self.specification_groups
+            if any(
+                getattr(product, field_name) not in (None, '')
+                for field_name in field_names
+            )
+        ]
         context['specifications'] = [
-            (product._meta.get_field(field_name).verbose_name, getattr(product, field_name))
-            for field_name in self.specification_fields
-            if getattr(product, field_name)
+            item
+            for group in context['specification_groups']
+            for item in group['items']
         ]
         context['related_products'] = Product.objects.filter(
             category=product.category,

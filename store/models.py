@@ -38,6 +38,7 @@ class Product(models.Model):
     badge = models.CharField('Бейдж', max_length=50, blank=True)
     description = models.TextField('Опис', blank=True)
     manufacturer = models.CharField('Виробник', max_length=100, blank=True)
+    model_series = models.CharField('Серія (модельний ряд)', max_length=100, blank=True)
     laptop_type = models.CharField('Тип ноутбуку', max_length=60, blank=True)
     display_diagonal = models.CharField('Діагональ дисплея', max_length=30, blank=True)
     resolution = models.CharField('Роздільна здатність', max_length=30, blank=True)
@@ -67,6 +68,13 @@ class Product(models.Model):
     )
     operating_system = models.CharField('Операційна система', max_length=100, blank=True)
     battery_capacity = models.CharField('Ємність акумулятора', max_length=40, blank=True)
+    webcam = models.CharField('Веб-камера', max_length=100, blank=True)
+    additional_features = models.TextField('Додаткові можливості', blank=True)
+    width = models.CharField('Ширина, мм', max_length=30, blank=True)
+    height = models.CharField('Висота, мм', max_length=30, blank=True)
+    depth = models.CharField('Глибина, мм', max_length=30, blank=True)
+    country_of_origin = models.CharField('Країна виробництва', max_length=100, blank=True)
+    warranty_months = models.PositiveSmallIntegerField('Гарантія, міс.', blank=True, null=True)
     features = models.TextField(
         'Особливості',
         blank=True,
@@ -89,6 +97,30 @@ class Product(models.Model):
     @property
     def product_code(self):
         return f'NXS-{self.pk:06d}'
+
+
+class ProductImage(models.Model):
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='gallery_images',
+        verbose_name='Товар',
+    )
+    image_url = models.URLField(
+        'URL додаткового фото',
+        max_length=1000,
+        help_text='Встав повне посилання на зображення, наприклад https://example.com/photo.jpg.',
+    )
+    alt_text = models.CharField('Опис фото', max_length=200, blank=True)
+    position = models.PositiveSmallIntegerField('Порядок', default=0)
+
+    class Meta:
+        ordering = ('position', 'pk')
+        verbose_name = 'фото товару'
+        verbose_name_plural = 'фотографії товару'
+
+    def __str__(self):
+        return self.alt_text or f'Фото: {self.product.name}'
 
 
 class Review(models.Model):

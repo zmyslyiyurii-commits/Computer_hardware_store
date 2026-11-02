@@ -1,6 +1,6 @@
 from django.contrib import admin, messages
-from django.utils.html import format_html_join
-from store.models import Category, Order, OrderItem, Product, Review
+from django.utils.html import format_html, format_html_join
+from store.models import Category, Order, OrderItem, Product, ProductImage, Review
 
 
 # Налаштування керування категоріями в адмінці Django.
@@ -12,12 +12,32 @@ class CategoryAdmin(admin.ModelAdmin):
 
 
 # Дає змогу шукати товари, фільтрувати їх і змінювати публікацію зі списку.
+class ProductImageInline(admin.TabularInline):
+    model = ProductImage
+    verbose_name = 'Додаткове фото'
+    verbose_name_plural = 'Галерея: додай окреме URL для кожного ракурсу'
+    extra = 3
+    fields = ('image_url', 'alt_text', 'position', 'preview')
+    readonly_fields = ('preview',)
+
+    @admin.display(description='Перегляд')
+    def preview(self, obj):
+        if not obj or not obj.image_url:
+            return 'Збережи фото, щоб побачити перегляд'
+        return format_html(
+            '<img src="{}" alt="{}" style="width: 90px; height: 65px; object-fit: contain;">',
+            obj.image_url,
+            obj.alt_text or 'Фото товару',
+        )
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'price', 'stock_quantity', 'is_active', 'created_at')
     list_filter = ('is_active', 'category')
     search_fields = ('name', 'category__name')
     list_editable = ('stock_quantity', 'is_active')
+    inlines = (ProductImageInline,)
     ordering = ('-created_at',)
     fieldsets = (
         ('Основна інформація', {
@@ -26,6 +46,7 @@ class ProductAdmin(admin.ModelAdmin):
         ('Характеристики ноутбука для фільтрів', {
             'fields': (
                 'manufacturer',
+                'model_series',
                 'laptop_type',
                 'display_diagonal',
                 'resolution',
@@ -47,6 +68,13 @@ class ProductAdmin(admin.ModelAdmin):
                 'interfaces',
                 'operating_system',
                 'battery_capacity',
+                'webcam',
+                'additional_features',
+                'width',
+                'height',
+                'depth',
+                'country_of_origin',
+                'warranty_months',
                 'features',
                 'weight',
                 'color',

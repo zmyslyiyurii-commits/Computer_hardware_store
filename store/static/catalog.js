@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     initializeSpecificationDialog();
+    initializeProductGallery();
     const toggle = document.querySelector('.catalog-button');
     const drawer = document.querySelector('#catalog-drawer');
 
@@ -73,6 +74,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeCarousels();
 });
+
+function initializeProductGallery() {
+    const mainImage = document.querySelector('[data-gallery-main]');
+    const thumbnails = document.querySelectorAll('[data-gallery-thumb]');
+    if (!mainImage || thumbnails.length < 2) {
+        return;
+    }
+
+    thumbnails.forEach((thumbnail) => {
+        thumbnail.addEventListener('click', () => {
+            mainImage.src = thumbnail.dataset.imageUrl;
+            mainImage.alt = thumbnail.dataset.imageAlt || '';
+            thumbnails.forEach((item) => {
+                const isActive = item === thumbnail;
+                item.classList.toggle('is-active', isActive);
+                item.setAttribute('aria-pressed', String(isActive));
+            });
+        });
+    });
+}
 
 function initializeSpecificationDialog() {
     const dialog = document.querySelector('.specifications-dialog');

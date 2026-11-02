@@ -55,13 +55,22 @@
         <section class="product-detail">
             <div class="product-detail-gallery">
                 <div class="product-detail-image">
-                    {% if product.image_url %}
-                        <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                    {% if product_images %}
+                        <img data-gallery-main src="{{ product_images.0.url }}" alt="{{ product_images.0.alt }}">
                     {% else %}
                         <span class="product-placeholder" aria-hidden="true">NEXUS</span>
                     {% endif %}
                     {% if product.badge %}<span class="badge product-detail-badge">{{ product.badge }}</span>{% endif %}
                 </div>
+                {% if product_images|length > 1 %}
+                    <div class="product-image-thumbnails" role="group" aria-label="Фотографії товару">
+                        {% for image in product_images %}
+                            <button class="product-image-thumbnail{% if forloop.first %} is-active{% endif %}" type="button" data-gallery-thumb data-image-url="{{ image.url }}" data-image-alt="{{ image.alt }}" aria-label="Показати фото {{ forloop.counter }}" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}">
+                                <img src="{{ image.url }}" alt="" loading="lazy">
+                            </button>
+                        {% endfor %}
+                    </div>
+                {% endif %}
 
                 <details class="product-description-section">
                     <summary>
@@ -145,19 +154,25 @@
                     <dialog class="specifications-dialog" aria-labelledby="specifications-title">
                         <div class="specifications-dialog-header">
                             <div>
-                                <span class="product-detail-category">{{ product.category.name }}</span>
                                 <h2 id="specifications-title">Характеристики</h2>
                             </div>
                             <button class="specifications-dialog-close" type="button" aria-label="Закрити характеристики">×</button>
                         </div>
-                        <dl class="specifications-list">
-                            {% for label, value in specifications %}
-                                <div class="specification-row">
-                                    <dt>{{ label }}</dt>
-                                    <dd>{{ value|linebreaksbr }}</dd>
-                                </div>
+                        <div class="specification-groups">
+                            {% for group in specification_groups %}
+                                <section class="specification-group" aria-labelledby="specification-group-{{ forloop.counter }}">
+                                    <h3 id="specification-group-{{ forloop.counter }}">{{ group.name }}</h3>
+                                    <dl class="specifications-list">
+                                        {% for label, value in group.items %}
+                                            <div class="specification-row">
+                                                <dt>{{ label }}</dt>
+                                                <dd>{{ value|linebreaksbr }}</dd>
+                                            </div>
+                                        {% endfor %}
+                                    </dl>
+                                </section>
                             {% endfor %}
-                        </dl>
+                        </div>
                     </dialog>
                 {% endif %}
             </div>

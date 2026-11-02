@@ -64,6 +64,7 @@ class LaptopProductFilterForm(forms.Form):
 
     filter_fields = (
         ('manufacturer', 'Виробник'),
+        ('model_series', 'Серія (модельний ряд)'),
         ('laptop_type', 'Тип ноутбуку'),
         ('display_diagonal', 'Діагональ дисплея'),
         ('resolution', 'Роздільна здатність'),
@@ -93,6 +94,7 @@ class LaptopProductFilterForm(forms.Form):
     multi_value_fields = ('wireless_technologies', 'interfaces', 'features')
 
     preset_options = {
+        'model_series': (),
         'manufacturer': (
             'Acer',
             'AGN',
