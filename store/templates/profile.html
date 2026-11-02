@@ -28,7 +28,7 @@
                 <span class="menu-icon" aria-hidden="true">☰</span> Каталог
             </button>
             <form class="search" role="search" action="{% url 'home' %}" method="get">
-                <input type="search" name="q" placeholder="Знайти ноутбук, відеокарту, аксесуар..." aria-label="Пошук товарів">
+                <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Знайти ноутбук, відеокарту, аксесуар..." aria-label="Пошук товарів">
                 <button type="submit" aria-label="Шукати">⌕</button>
             </form>
             <nav class="header-actions" aria-label="Особисті розділи">

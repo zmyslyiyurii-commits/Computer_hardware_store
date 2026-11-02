@@ -7,6 +7,62 @@ from django.urls import reverse
 from store.models import Category, Order, OrderItem, Product, ProductImage
 
 
+class ProductSearchTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Ноутбуки')
+        self.product = Product.objects.create(
+            name='Lenovo ThinkPad X1',
+            category=self.category,
+            price=Decimal('42000.00'),
+            model_series='ThinkPad',
+        )
+
+    def test_search_redirects_exact_category_to_category_catalog(self):
+        response = self.client.get(reverse('home'), {'q': 'Ноутбуки'})
+
+        self.assertRedirects(
+            response,
+            reverse('category_products', args=(self.category.pk,)),
+        )
+
+    def test_search_redirects_exact_product_to_product_page(self):
+        response = self.client.get(reverse('home'), {'q': self.product.name})
+
+        self.assertRedirects(
+            response,
+            reverse('product_detail', args=(self.product.pk,)),
+        )
+
+    def test_search_shows_partial_product_matches(self):
+        response = self.client.get(reverse('home'), {'q': 'ThinkPad'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context['products']), [self.product])
+        self.assertContains(response, 'Результати пошуку')
+        self.assertContains(response, self.product.name)
+
+    def test_search_matches_multiple_words_in_product_name(self):
+        response = self.client.get(reverse('home'), {'q': 'Lenovo ThinkPad'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context['products']), [self.product])
+
+    def test_search_shows_message_when_no_products_match(self):
+        response = self.client.get(reverse('home'), {'q': 'Невідомий товар'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'товарів не знайдено')
+
+    def test_logo_on_home_page_links_to_home(self):
+        response = self.client.get(reverse('home'))
+
+        self.assertContains(
+            response,
+            f'<a class="logo" href="{reverse("home")}" aria-label="NEXUS — на головну">',
+            html=False,
+        )
+
+
 class LaptopSpecificationTests(TestCase):
     def setUp(self):
         self.category = Category.objects.create(name='Ноутбуки')

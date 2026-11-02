@@ -22,12 +22,12 @@
 
     <header class="main-header">
         <div class="container header-row">
-            <a class="logo" href="#" aria-label="NEXUS — на головну">NEXUS<span>.</span></a>
+            <a class="logo" href="{% url 'home' %}" aria-label="NEXUS — на головну">NEXUS<span>.</span></a>
             <button class="catalog-button" type="button" aria-expanded="false" aria-controls="catalog-drawer">
                 <span class="menu-icon" aria-hidden="true">☰</span> Каталог
             </button>
-            <form class="search" role="search" action="#" method="get">
-                <input type="search" name="q" placeholder="Знайти ноутбук, відеокарту, аксесуар..." aria-label="Пошук товарів">
+            <form class="search" role="search" action="{% url 'home' %}" method="get">
+                <input type="search" name="q" value="{{ search_query }}" placeholder="Знайти ноутбук, відеокарту, аксесуар..." aria-label="Пошук товарів">
                 <button type="submit" aria-label="Шукати">⌕</button>
             </form>
             <nav class="header-actions" aria-label="Особисті розділи">
@@ -53,6 +53,7 @@
     {% endif %}
 
     <main class="container">
+        {% if not search_query %}
         <section class="hero-grid" aria-label="Рекомендовані пропозиції">
             <div class="hero">
                 <div class="hero-copy">
@@ -109,13 +110,20 @@
                 {% endfor %}
             </div>
         </section>
+        {% endif %}
 
         <section class="section" id="products">
             <div class="section-heading">
                 <div>
-                    <h2>Популярне зараз</h2>
-                    <p>Техніка, яку обирають цього тижня</p>
+                    {% if search_query %}
+                        <h2>Результати пошуку</h2>
+                        <p>За запитом «{{ search_query }}» знайдено {{ products|length }} товарів</p>
+                    {% else %}
+                        <h2>Популярне зараз</h2>
+                        <p>Техніка, яку обирають цього тижня</p>
+                    {% endif %}
                 </div>
+                {% if not search_query %}
                 <div class="section-actions">
                     <button class="text-link all-products-button" type="button" aria-expanded="false" aria-controls="products-carousel">Усі товари&nbsp; ↗</button>
                     <div class="carousel-controls" aria-label="Перегортання товарів">
@@ -123,8 +131,9 @@
                         <button class="carousel-arrow" type="button" data-carousel-next="products-carousel" aria-label="Наступні товари">→</button>
                     </div>
                 </div>
+                {% endif %}
             </div>
-            <div class="product-grid carousel-track" id="products-carousel">
+            <div class="product-grid{% if not search_query %} carousel-track{% endif %}" id="products-carousel">
                 {% for product in products %}
                     <article class="product-card">
                         <div class="product-badge-slot">
@@ -155,22 +164,28 @@
                         </div>
                     </article>
                 {% empty %}
-                    <p class="empty-products">Товари скоро з’являться. Додайте їх через адмінпанель.</p>
+                    {% if search_query %}
+                        <p class="empty-products">На жаль, за цим запитом товарів не знайдено. Спробуй іншу назву.</p>
+                    {% else %}
+                        <p class="empty-products">Товари скоро з’являться. Додайте їх через адмінпанель.</p>
+                    {% endif %}
                 {% endfor %}
             </div>
         </section>
 
+        {% if not search_query %}
         <section class="service-banner" id="service" aria-label="Переваги магазину">
             <h2>Покупка без зайвих турбот</h2>
             <div class="service-item"><span class="service-icon" aria-hidden="true">↗</span><span><b>Швидка доставка</b>Зручно по всій Україні</span></div>
             <div class="service-item"><span class="service-icon" aria-hidden="true">◇</span><span><b>Гарантія якості</b>Офіційна техніка</span></div>
             <div class="service-item"><span class="service-icon" aria-hidden="true">♡</span><span><b>Допомога з вибором</b>Підкажемо найкраще</span></div>
         </section>
+        {% endif %}
     </main>
 
     <footer id="contacts">
         <div class="container footer-inner">
-            <a class="footer-brand" href="#">NEXUS<span>.</span></a>
+            <a class="footer-brand" href="{% url 'home' %}">NEXUS<span>.</span></a>
             <span>Магазин комп'ютерної техніки</span>
             <span>© 2026 NEXUS. Усі права захищені.</span>
         </div>

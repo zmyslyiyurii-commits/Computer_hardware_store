@@ -55,13 +55,47 @@ def _get_cart_items(request):
     return items
 
 
+def _search_products(query):
+    products = Product.objects.filter(is_active=True).select_related('category')
+    for term in query.split():
+        products = products.filter(
+            Q(name__icontains=term)
+            | Q(manufacturer__icontains=term)
+            | Q(model_series__icontains=term)
+            | Q(description__icontains=term)
+            | Q(category__name__icontains=term)
+        )
+    return products
+
+
 class HomeView(TemplateView):
     template_name = 'home.html'
 
+    def get(self, request, *args, **kwargs):
+        query = request.GET.get('q', '').strip()
+        if query:
+            category = Category.objects.filter(name__iexact=query).first()
+            if category:
+                return redirect(
+                    'category_products',
+                    category_id=category.pk,
+                )
+
+            matching_products = _search_products(query)
+            exact_products = matching_products.filter(name__iexact=query)
+            exact_product = exact_products.first()
+            if exact_product and not exact_products.exclude(pk=exact_product.pk).exists():
+                return redirect('product_detail', product_id=exact_product.pk)
+        return super().get(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Головна показує опубліковані товари та всі категорії з бази даних.
-        context['products'] = Product.objects.filter(is_active=True).select_related('category')
+        query = self.request.GET.get('q', '').strip()
+        products = _search_products(query) if query else Product.objects.filter(
+            is_active=True,
+        ).select_related('category')
+        context['products'] = products
+        context['search_query'] = query
         context['categories'] = Category.objects.all()
         context['cart_count'] = _cart_count(self.request)
         return context
