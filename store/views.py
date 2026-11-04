@@ -14,6 +14,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, TemplateView
 from store.forms import (
     CheckoutForm,
+    ComputerProductFilterForm,
     LaptopProductFilterForm,
     ProductReviewForm,
     ProfileDetailsForm,
@@ -33,6 +34,13 @@ def _cart_count(request):
         for quantity in _session_cart(request).values()
         if isinstance(quantity, int) and not isinstance(quantity, bool) and quantity > 0
     )
+
+
+def _favorite_ids(request):
+    favorites = request.session.get('favorites', [])
+    if not isinstance(favorites, list):
+        return []
+    return [int(value) for value in favorites if str(value).isdigit()]
 
 
 def _get_cart_items(request):
@@ -98,18 +106,20 @@ class HomeView(TemplateView):
         context['search_query'] = query
         context['categories'] = Category.objects.all()
         context['cart_count'] = _cart_count(self.request)
+        context['favorite_ids'] = _favorite_ids(self.request)
         return context
 
 
 class CategoryProductsView(TemplateView):
     # Сторінка каталогу відбирає товари за категорією з адреси сторінки.
-    template_name = 'home_laptops.html'
+    template_name = 'category_products.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         category = get_object_or_404(Category, pk=self.kwargs['category_id'])
         context['categories'] = Category.objects.all()
         context['cart_count'] = _cart_count(self.request)
+        context['favorite_ids'] = _favorite_ids(self.request)
         context['category'] = category
         # Для назви сторінки використовуємо узгоджену множину, навіть якщо
         # категорію в адмінці поки названо в однині.
@@ -123,11 +133,18 @@ class CategoryProductsView(TemplateView):
             is_active=True,
         ).select_related('category')
         context['filter_groups'] = ()
-        context['laptop_filter_form'] = None
+        context['filter_form'] = None
         context['placeholder_filter_groups'] = ()
-        if category.name.strip().casefold().startswith('ноутбук'):
+        normalized_category_name = category.name.strip().casefold().replace("'", '’')
+        filter_form_class = None
+        if normalized_category_name.startswith('ноутбук'):
+            filter_form_class = LaptopProductFilterForm
+        elif normalized_category_name == 'комп’ютери':
+            filter_form_class = ComputerProductFilterForm
+
+        if filter_form_class:
             base_products = context['products']
-            filter_form = LaptopProductFilterForm(
+            filter_form = filter_form_class(
                 self.request.GET or None,
                 products=base_products,
             )
@@ -144,30 +161,142 @@ class CategoryProductsView(TemplateView):
                 for field_name, _ in filter_form.filter_fields:
                     selected_values = cleaned_data[field_name]
                     if selected_values:
-                        if field_name in filter_form.multi_value_fields:
+                        if field_name == 'computer_processor_frequency':
+                            selected_ranges = {
+                                label: (minimum, maximum)
+                                for label, minimum, maximum in filter_form.frequency_ranges
+                                if label in selected_values
+                            }
+                            matching_ids = []
+                            for product_id, stored_value in context['products'].values_list(
+                                'pk',
+                                field_name,
+                            ):
+                                frequency = filter_form.parse_frequency(stored_value)
+                                if frequency is not None and any(
+                                    (minimum is None or frequency > minimum)
+                                    and (maximum is None or frequency <= maximum)
+                                    for minimum, maximum in selected_ranges.values()
+                                ):
+                                    matching_ids.append(product_id)
+                            context['products'] = context['products'].filter(pk__in=matching_ids)
+                        elif field_name in filter_form.multi_value_fields:
                             matching_values = Q()
                             for value in selected_values:
-                                matching_values |= (
-                                    Q(**{f'{field_name}__iexact': value})
-                                    | Q(**{f'{field_name}__istartswith': f'{value},'})
-                                    | Q(**{f'{field_name}__icontains': f', {value},'})
-                                    | Q(**{f'{field_name}__icontains': f',{value},'})
-                                    | Q(**{f'{field_name}__iendswith': f', {value}'})
-                                    | Q(**{f'{field_name}__iendswith': f',{value}'})
-                                )
+                                for alias in filter_form.filter_value_aliases(field_name, value):
+                                    matching_values |= (
+                                        Q(**{f'{field_name}__iexact': alias})
+                                        | Q(**{f'{field_name}__istartswith': f'{alias},'})
+                                        | Q(**{f'{field_name}__icontains': f', {alias},'})
+                                        | Q(**{f'{field_name}__icontains': f',{alias},'})
+                                        | Q(**{f'{field_name}__iendswith': f', {alias}'})
+                                        | Q(**{f'{field_name}__iendswith': f',{alias}'})
+                                    )
                             context['products'] = context['products'].filter(matching_values)
                         else:
-                            context['products'] = context['products'].filter(
-                                **{f'{field_name}__in': selected_values},
-                            )
+                            matching_values = Q()
+                            for value in selected_values:
+                                for alias in filter_form.filter_value_aliases(field_name, value):
+                                    matching_values |= Q(**{f'{field_name}__iexact': alias})
+                            context['products'] = context['products'].filter(matching_values)
 
-            context['laptop_filter_form'] = filter_form
+            context['filter_form'] = filter_form
             context['filter_groups'] = filter_form.filter_groups
         return context
 
 
 class ProductDetailView(TemplateView):
     template_name = 'product_detail.html'
+
+    computer_specification_groups = (
+        ('Основні характеристики', (
+            'computer_type',
+            'computer_view',
+            'computer_display_diagonal',
+            'computer_screen_type',
+        )),
+        ('Процесор', (
+            'computer_intel_generation',
+            'computer_amd_generation',
+            'computer_processor_series',
+            'computer_processor',
+            'computer_processor_cores',
+            'processor_threads',
+            'computer_processor_frequency',
+            'processor_boost_frequency',
+            'processor_boost_supported',
+        )),
+        ('Материнська плата', (
+            'motherboard_socket',
+            'motherboard_chipset',
+        )),
+        ('Відеокарта', (
+            'computer_graphics_type',
+            'graphics_card_manufacturer',
+            'computer_discrete_graphics_series',
+            'computer_video_memory',
+        )),
+        ("Оперативна пам'ять", (
+            'computer_ram_capacity',
+            'ram_form_factor',
+            'computer_ram_slots',
+            'computer_ram_type',
+            'computer_ram_frequency',
+            'computer_ram_standard',
+            'computer_ram_max_capacity',
+        )),
+        ('Система зберігання', (
+            'computer_storage_types',
+            'computer_ssd_capacity',
+            'computer_hdd_capacity',
+            'computer_optical_drive',
+            'computer_card_reader',
+        )),
+        ('Мультимедіа', (
+            'computer_built_in_microphone',
+            'computer_webcam',
+            'computer_built_in_speakers',
+            'computer_audio_controller',
+            'computer_multichannel_audio',
+        )),
+        ('Комунікаційні можливості', (
+            'computer_wired_network',
+            'computer_wireless_technologies',
+        )),
+        ('Порти та роз’єми', (
+            'computer_interfaces',
+        )),
+        ('Програмне забезпечення', (
+            'computer_operating_system',
+        )),
+        ('Додатково', (
+            'computer_peripherals_included',
+            'computer_additional_features',
+            'computer_features',
+            'computer_vesa_support',
+            'computer_vr_support',
+            'computer_backlit',
+        )),
+        ('Корпус', (
+            'case_model',
+            'case_metal_thickness',
+            'case_material',
+            'psu_location',
+            'psu_power',
+            'case_lighting',
+            'cooling',
+            'computer_width',
+            'computer_height',
+            'computer_depth',
+            'computer_color',
+        )),
+        ('Інші характеристики', (
+            'computer_manufacturer',
+            'computer_country_of_origin',
+            'computer_warranty_months',
+            'computer_weight',
+        )),
+    )
 
     specification_groups = (
         ('Основні характеристики', (
@@ -250,6 +379,14 @@ class ProductDetailView(TemplateView):
                 'url': product.image_url,
                 'alt': product.name,
             })
+        computer_category_name = (
+            product.category.name.strip().casefold().replace("'", '’')
+        )
+        specification_groups = (
+            self.computer_specification_groups
+            if computer_category_name == 'комп’ютери'
+            else self.specification_groups
+        )
         context['specification_groups'] = [
             {
                 'name': group_name,
@@ -259,7 +396,7 @@ class ProductDetailView(TemplateView):
                     if getattr(product, field_name) not in (None, '')
                 ],
             }
-            for group_name, field_names in self.specification_groups
+            for group_name, field_names in specification_groups
             if any(
                 getattr(product, field_name) not in (None, '')
                 for field_name in field_names
@@ -274,6 +411,7 @@ class ProductDetailView(TemplateView):
             category=product.category,
             is_active=True,
         ).exclude(pk=product.pk)[:4]
+        context['favorite_ids'] = _favorite_ids(self.request)
         approved_reviews = product.reviews.filter(is_approved=True)
         rating = approved_reviews.aggregate(average=Avg('rating'))
         context['average_rating'] = rating['average'] or 0
@@ -465,6 +603,13 @@ def toggle_favorite_view(request, product_id):
         return redirect('favorites')
     if request.POST.get('next_url') == 'account_favorites':
         return redirect(f'{reverse_lazy("profile")}?section=favorites')
+    next_url = request.POST.get('next_url', '')
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
     return redirect('product_detail', product_id=product.pk)
 
 

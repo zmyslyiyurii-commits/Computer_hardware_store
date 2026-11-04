@@ -1,4 +1,6 @@
 from collections import Counter
+from decimal import Decimal, InvalidOperation
+import re
 
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
@@ -266,7 +268,7 @@ class LaptopProductFilterForm(forms.Form):
                 counts = Counter()
                 for stored_values in products.values_list(field_name, flat=True):
                     counts.update({
-                        value.strip()
+                        self.normalize_filter_value(field_name, value)
                         for value in stored_values.split(',')
                         if value.strip()
                     })
@@ -278,18 +280,22 @@ class LaptopProductFilterForm(forms.Form):
                     .exclude(**{field_name: ''})
                     .order_by(field_name)
                 )
-                counts = {option[field_name]: option['product_count'] for option in options}
-            values = list(self.preset_options[field_name])
-            values.extend(sorted(
-                (value for value in counts if value not in values),
-                key=str.casefold,
-            ))
+                counts = Counter()
+                for option in options:
+                    value = self.normalize_filter_value(field_name, option[field_name])
+                    counts[value] += option['product_count']
+            choices_by_key = {}
+            for value in self.preset_options[field_name]:
+                normalized_value = self.normalize_filter_value(field_name, value)
+                choices_by_key.setdefault(normalized_value.casefold(), normalized_value)
+            for value in sorted(counts, key=str.casefold):
+                choices_by_key.setdefault(value.casefold(), value)
             choices = [
                 (
                     value,
                     f'{value} ({counts[value]})' if counts.get(value, 0) else value,
                 )
-                for value in values
+                for value in choices_by_key.values()
             ]
             self.fields[field_name] = forms.MultipleChoiceField(
                 label=label,
@@ -302,6 +308,12 @@ class LaptopProductFilterForm(forms.Form):
                 'field': self[field_name],
             })
 
+    def normalize_filter_value(self, field_name, value):
+        return value.strip()
+
+    def filter_value_aliases(self, field_name, value):
+        return (value,)
+
     def clean(self):
         cleaned_data = super().clean()
         price_min = cleaned_data.get('price_min')
@@ -311,3 +323,366 @@ class LaptopProductFilterForm(forms.Form):
             raise ValidationError('Мінімальна ціна не може бути більшою за максимальну.')
 
         return cleaned_data
+
+
+class ComputerProductFilterForm(LaptopProductFilterForm):
+    frequency_ranges = (
+        ('до 2 ГГц', None, Decimal('2')),
+        ('2–2.5 ГГц', Decimal('2'), Decimal('2.5')),
+        ('2.5–3 ГГц', Decimal('2.5'), Decimal('3')),
+        ('3–3.5 ГГц', Decimal('3'), Decimal('3.5')),
+        ('понад 3.5 ГГц', Decimal('3.5'), None),
+    )
+
+    @staticmethod
+    def parse_frequency(value):
+        match = re.search(r'\d+(?:[.,]\d+)?', value or '')
+        if not match:
+            return None
+        try:
+            return Decimal(match.group().replace(',', '.'))
+        except InvalidOperation:
+            return None
+
+    filter_fields = (
+        ('computer_manufacturer', 'Виробник'),
+        ('computer_type', 'Тип ПК'),
+        ('computer_view', 'Вид'),
+        ('computer_display_diagonal', 'Діагональ екрану'),
+        ('computer_screen_type', 'Тип екрану'),
+        ('computer_processor_series', 'Серія процесора'),
+        ('computer_amd_generation', 'Покоління процесора AMD'),
+        ('computer_intel_generation', 'Покоління процесора Intel'),
+        ('computer_processor_cores', 'Кількість ядер'),
+        ('computer_processor_frequency', 'Частота процесора, ГГц'),
+        ('computer_graphics_type', 'Тип відеокарти'),
+        ('computer_discrete_graphics_series', 'Модель відеокарти'),
+        ('computer_video_memory', "Об'єм графічної пам'яті"),
+        ('computer_ram_capacity', "Об'єм оперативної пам'яті"),
+        ('computer_ram_type', "Тип пам'яті"),
+        ('computer_storage_types', 'Типи внутрішніх накопичувачів'),
+        ('computer_hdd_capacity', 'Об’єм HDD'),
+        ('computer_ssd_capacity', 'Об’єм SSD'),
+        ('computer_optical_drive', 'Оптичний привід'),
+        ('computer_card_reader', 'Кардридер'),
+        ('computer_built_in_microphone', 'Вбудований мікрофон'),
+        ('computer_webcam', 'Вбудована веб-камера'),
+        ('computer_built_in_speakers', 'Вбудовані динаміки'),
+        ('computer_wireless_technologies', "Бездротовий зв'язок"),
+        ('computer_interfaces', 'Зовнішні порти та роз’єми'),
+        ('computer_operating_system', 'Операційна система'),
+        ('computer_peripherals_included', 'Пристрої введення в комплекті'),
+        ('computer_vesa_support', 'Можливість кріплення VESA'),
+        ('computer_vr_support', 'З підтримкою VR'),
+        ('computer_backlit', 'З підсвічуванням'),
+    )
+    multi_value_fields = ('computer_wireless_technologies', 'computer_interfaces')
+    binary_filter_fields = (
+        'computer_optical_drive',
+        'computer_card_reader',
+        'computer_built_in_microphone',
+        'computer_webcam',
+        'computer_built_in_speakers',
+        'computer_peripherals_included',
+        'computer_vesa_support',
+        'computer_vr_support',
+        'computer_backlit',
+    )
+    negative_values = {
+        'немає',
+        'нема',
+        'ні',
+        'відсутній',
+        'відсутня',
+        'відсутнє',
+        'відсутні',
+        'не підтримується',
+        'не має',
+    }
+    positive_values = {
+        'є',
+        'так',
+        'наявний',
+        'наявна',
+        'наявне',
+        'наявні',
+        'присутній',
+        'присутня',
+        'присутнє',
+        'присутні',
+    }
+    value_aliases = {
+        'Є': (
+            'Є',
+            'Так',
+            'Наявний',
+            'Наявна',
+            'Наявне',
+            'Наявні',
+            'Присутній',
+            'Присутня',
+            'Присутнє',
+            'Присутні',
+        ),
+        'Немає': (
+            'Немає',
+            'Нема',
+            'Ні',
+            'Відсутній',
+            'Відсутня',
+            'Відсутнє',
+            'Відсутні',
+            'Не підтримується',
+            'Не має',
+        ),
+    }
+    preset_options = {
+        'computer_manufacturer': (
+            '2E',
+            'Acer',
+            'Apple',
+            'Artline',
+            'ASUS',
+            'Dell',
+            'Expert PC',
+            'HP',
+            'Lenovo',
+            'MSI',
+            'Vinga',
+        ),
+        'computer_type': (
+            'Ігрові',
+            'Неттопи Vinga',
+            'Для роботи та навчання',
+            'Робочі станції',
+            'Barebone системи',
+        ),
+        'computer_view': (
+            'Класичні',
+            'Компактні',
+            'Моноблоки',
+            'Неттопи',
+            'Міні-ПК',
+        ),
+        'computer_display_diagonal': (
+            '10" - 14"',
+            '15" - 19"',
+            '20" - 23"',
+            '23.8"',
+            '24" - 26"',
+            '27"',
+            '28" - 31"',
+            '32" і більше',
+        ),
+        'computer_screen_type': (
+            'Звичайний',
+            'Сенсорний',
+        ),
+        'computer_processor_series': (
+            'Intel Core 3',
+            'Intel Core 5',
+            'Intel Core 7',
+            'Intel Core 9',
+            'Intel Core i3',
+            'Intel Core i5',
+            'Intel Core i7',
+            'Intel Core i9',
+            'Intel Core Ultra 5',
+            'Intel Core Ultra 7',
+            'Intel Core Ultra 9',
+            'AMD Ryzen 3',
+            'AMD Ryzen 5',
+            'AMD Ryzen 7',
+            'AMD Ryzen 9',
+        ),
+        'computer_amd_generation': (
+            'Zen',
+            'Zen 2',
+            'Zen 3',
+            'Zen 3+',
+            'Zen 4',
+            'Zen 5',
+        ),
+        'computer_intel_generation': (
+            '10-е покоління',
+            '11-е покоління',
+            '12-е покоління',
+            '13-е покоління',
+            '14-е покоління',
+            '15-е покоління',
+        ),
+        'computer_processor_cores': (
+            '2 ядра',
+            '4 ядра',
+            '6 ядер',
+            '8 ядер',
+            '10 ядер',
+            '12 ядер',
+            '14 ядер',
+            '16 ядер',
+            '20 ядер',
+            '24 ядра',
+            '32 ядра',
+        ),
+        'computer_processor_frequency': tuple(option[0] for option in frequency_ranges),
+        'computer_graphics_type': (
+            'Дискретна',
+            'Інтегрована',
+            'Вбудована',
+        ),
+        'computer_discrete_graphics_series': (
+            'NVIDIA GeForce RTX 3050',
+            'NVIDIA GeForce RTX 3060',
+            'NVIDIA GeForce RTX 4060',
+            'NVIDIA GeForce RTX 4070',
+            'NVIDIA GeForce RTX 4080',
+            'NVIDIA GeForce RTX 4090',
+            'NVIDIA GeForce RTX 5050',
+            'NVIDIA GeForce RTX 5060',
+            'NVIDIA GeForce RTX 5070',
+            'NVIDIA GeForce RTX 5070 Ti',
+            'NVIDIA GeForce RTX 5080',
+            'NVIDIA GeForce RTX 5090',
+            'AMD Radeon RX 6400',
+            'AMD Radeon RX 7600',
+            'AMD Radeon RX 7700 XT',
+            'AMD Radeon RX 7800 XT',
+            'AMD Radeon RX 7900 XT',
+            'AMD Radeon RX 9070',
+            'AMD Radeon RX 9070 XT',
+        ),
+        'computer_video_memory': (
+            '2 ГБ',
+            '4 ГБ',
+            '6 ГБ',
+            '8 ГБ',
+            '10 ГБ',
+            '12 ГБ',
+            '16 ГБ',
+            '24 ГБ',
+            '32 ГБ',
+        ),
+        'computer_ram_capacity': (
+            '4 ГБ',
+            '8 ГБ',
+            '16 ГБ',
+            '24 ГБ',
+            '32 ГБ',
+            '48 ГБ',
+            '64 ГБ',
+            '96 ГБ',
+            '128 ГБ',
+            '192 ГБ',
+        ),
+        'computer_ram_type': ('DDR3', 'DDR4', 'DDR5'),
+        'computer_storage_types': ('SSD', 'HDD', 'SSD + HDD', 'Без накопичувача'),
+        'computer_hdd_capacity': (
+            '500 ГБ',
+            '1 ТБ',
+            '2 ТБ',
+            '4 ТБ',
+            'Без HDD',
+        ),
+        'computer_ssd_capacity': (
+            '120 ГБ',
+            '240 ГБ',
+            '256 ГБ',
+            '480 ГБ',
+            '500 ГБ',
+            '512 ГБ',
+            '1 ТБ',
+            '2 ТБ',
+            '4 ТБ',
+            'Без SSD',
+        ),
+        'computer_optical_drive': ('Є', 'Немає'),
+        'computer_card_reader': ('Є', 'Немає'),
+        'computer_built_in_microphone': ('Є', 'Немає'),
+        'computer_webcam': ('Є', 'Немає'),
+        'computer_built_in_speakers': ('Є', 'Немає'),
+        'computer_wireless_technologies': (
+            'Bluetooth',
+            'Wi-Fi',
+            'Wi-Fi 5',
+            'Wi-Fi 6',
+            'Wi-Fi 6E',
+            'Wi-Fi 7',
+        ),
+        'computer_interfaces': (
+            'USB',
+            'USB 2.0',
+            'USB 3.0',
+            'USB 3.1',
+            'USB 3.2',
+            'USB Type-A',
+            'USB Type-C',
+            'HDMI',
+            'DisplayPort',
+            'VGA',
+            'DVI',
+            'LAN (RJ-45)',
+            'аудіо',
+            'Thunderbolt',
+        ),
+        'computer_operating_system': (
+            'Без ОС',
+            'Windows 10 Home',
+            'Windows 10 Pro',
+            'Windows 11 Home',
+            'Windows 11 Pro',
+            'Linux',
+            'Ubuntu',
+            'FreeDOS',
+        ),
+        'computer_peripherals_included': ('Є', 'Немає'),
+        'computer_vesa_support': ('Є', 'Немає'),
+        'computer_vr_support': ('Є', 'Немає'),
+        'computer_backlit': ('Є', 'Немає'),
+    }
+
+    def __init__(self, *args, products, **kwargs):
+        super().__init__(*args, products=products, **kwargs)
+        if 'computer_processor_frequency' not in self.fields:
+            return
+
+        counts = Counter()
+        for value in products.values_list('computer_processor_frequency', flat=True):
+            frequency = self.parse_frequency(value)
+            if frequency is None:
+                continue
+            for label, minimum, maximum in self.frequency_ranges:
+                if (minimum is None or frequency > minimum) and (maximum is None or frequency <= maximum):
+                    counts[label] += 1
+                    break
+
+        field = self.fields['computer_processor_frequency']
+        field.choices = [
+            (label, f'{label} ({counts[label]})' if counts[label] else label)
+            for label, _, _ in self.frequency_ranges
+        ]
+
+    def normalize_filter_value(self, field_name, value):
+        value = value.strip()
+        normalized = value.casefold()
+        if field_name in self.binary_filter_fields:
+            if normalized in self.negative_values:
+                return 'Немає'
+            if field_name == 'computer_optical_drive' and normalized in {
+                'без dvd',
+                'без dvd-приводу',
+                'без оптичного приводу',
+            }:
+                return 'Немає'
+            if normalized in self.positive_values:
+                return 'Є'
+        return value
+
+    def filter_value_aliases(self, field_name, value):
+        if field_name in self.binary_filter_fields:
+            normalized = self.normalize_filter_value(field_name, value)
+            if normalized in self.value_aliases:
+                aliases = list(self.value_aliases[normalized])
+                if normalized == 'Немає' and field_name == 'computer_optical_drive':
+                    aliases.extend(('Без DVD', 'Без DVD-приводу', 'Без оптичного приводу'))
+                return tuple(aliases)
+        return (value,)

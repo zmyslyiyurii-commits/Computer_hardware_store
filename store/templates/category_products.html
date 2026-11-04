@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#f6f7f4">
     <title>{{ category_title }} — NEXUS</title>
     <link rel="stylesheet" href="{% static 'home.css' %}">
-    <link rel="stylesheet" href="{% static 'home_laptops.css' %}">
+    <link rel="stylesheet" href="{% static 'category_products.css' %}">
 </head>
 <body>
     <div class="topline">
@@ -69,26 +69,26 @@
                         <a class="clear-filters" href="{% url 'category_products' category.pk %}">Очистити</a>
                     </div>
                     <form method="get" class="filter-form">
-                        {% if laptop_filter_form %}
+                        {% if filter_form %}
                             <div class="filter-list">
-                                {% if laptop_filter_form.non_field_errors %}
-                                    <div class="filter-errors">{{ laptop_filter_form.non_field_errors }}</div>
+                                {% if filter_form.non_field_errors %}
+                                    <div class="filter-errors">{{ filter_form.non_field_errors }}</div>
                                 {% endif %}
                                 <details class="filter-group" open>
                                     <summary>Ціна<span class="chevron" aria-hidden="true">›</span></summary>
                                     <div class="price-range">
                                         <label>
                                             <span>Від, ₴</span>
-                                            {{ laptop_filter_form.price_min }}
+                                            {{ filter_form.price_min }}
                                         </label>
                                         <label>
                                             <span>До, ₴</span>
-                                            {{ laptop_filter_form.price_max }}
+                                            {{ filter_form.price_max }}
                                         </label>
-                                        {% for error in laptop_filter_form.price_min.errors %}
+                                        {% for error in filter_form.price_min.errors %}
                                             <span class="filter-error">{{ error }}</span>
                                         {% endfor %}
-                                        {% for error in laptop_filter_form.price_max.errors %}
+                                        {% for error in filter_form.price_max.errors %}
                                             <span class="filter-error">{{ error }}</span>
                                         {% endfor %}
                                     </div>
@@ -146,15 +146,24 @@
                                     <h2 class="product-name"><a href="{% url 'product_detail' product.pk %}">{{ product.name }}</a></h2>
                                     <div class="product-bottom">
                                         <span class="price">{{ product.price|floatformat:"-2" }} ₴</span>
-                                        {% if product.stock_quantity %}
-                                            <form method="post" action="{% url 'add_to_cart' product.pk %}">
+                                        <div class="product-card-actions">
+                                            <form method="post" action="{% url 'toggle_favorite' product.pk %}">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="next_url" value="{{ request.get_full_path }}">
-                                                <button class="add-button" type="submit" aria-label="Додати {{ product.name }} у кошик">+</button>
+                                                <button class="favorite-card-button{% if product.pk in favorite_ids %} is-favorite{% endif %}" type="submit" aria-label="{% if product.pk in favorite_ids %}Видалити {{ product.name }} з обраного{% else %}Додати {{ product.name }} в обране{% endif %}" title="{% if product.pk in favorite_ids %}В обраному{% else %}Додати в обране{% endif %}">
+                                                    {% if product.pk in favorite_ids %}♥{% else %}♡{% endif %}
+                                                </button>
                                             </form>
-                                        {% else %}
-                                            <button class="add-button" type="button" disabled aria-label="{{ product.name }} немає в наявності">+</button>
-                                        {% endif %}
+                                            {% if product.stock_quantity %}
+                                                <form method="post" action="{% url 'add_to_cart' product.pk %}">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="next_url" value="{{ request.get_full_path }}">
+                                                    <button class="add-button" type="submit" aria-label="Додати {{ product.name }} у кошик">+</button>
+                                                </form>
+                                            {% else %}
+                                                <button class="add-button" type="button" disabled aria-label="{{ product.name }} немає в наявності">+</button>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </article>

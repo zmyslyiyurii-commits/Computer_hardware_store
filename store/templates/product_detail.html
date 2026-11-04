@@ -269,8 +269,16 @@
                             <div class="product-info">
                                 <span class="product-type">{{ related.category.name }}</span>
                                 <h3 class="product-name"><a href="{% url 'product_detail' related.pk %}">{{ related.name }}</a></h3>
-                                    <div class="product-bottom">
-                                        <span class="price">{{ related.price|floatformat:"-2" }} ₴</span>
+                                <div class="product-bottom">
+                                    <span class="price">{{ related.price|floatformat:"-2" }} ₴</span>
+                                    <div class="product-card-actions">
+                                        <form method="post" action="{% url 'toggle_favorite' related.pk %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next_url" value="{{ request.get_full_path }}">
+                                            <button class="favorite-card-button{% if related.pk in favorite_ids %} is-favorite{% endif %}" type="submit" aria-label="{% if related.pk in favorite_ids %}Видалити {{ related.name }} з обраного{% else %}Додати {{ related.name }} в обране{% endif %}" title="{% if related.pk in favorite_ids %}В обраному{% else %}Додати в обране{% endif %}">
+                                                {% if related.pk in favorite_ids %}♥{% else %}♡{% endif %}
+                                            </button>
+                                        </form>
                                         {% if related.stock_quantity %}
                                             <form method="post" action="{% url 'add_to_cart' related.pk %}">
                                                 {% csrf_token %}
@@ -281,6 +289,7 @@
                                             <button class="add-button" type="button" disabled aria-label="{{ related.name }} немає в наявності">+</button>
                                         {% endif %}
                                     </div>
+                                </div>
                             </div>
                         </article>
                     {% endfor %}
