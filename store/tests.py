@@ -42,6 +42,48 @@ class ProductSearchTests(TestCase):
         self.assertContains(response, 'Результати пошуку')
         self.assertContains(response, self.product.name)
 
+    def test_homepage_shows_only_manually_selected_popular_products(self):
+        featured_component = Product.objects.create(
+            name='Відеокарта для популярного блоку',
+            category=Category.objects.create(name='Комплектуючі для ПК'),
+            component_type='graphics_card',
+            price=Decimal('10000.00'),
+            is_featured=True,
+        )
+        featured_regular_product = Product.objects.create(
+            name='Звичайний популярний товар',
+            category=self.category,
+            price=Decimal('12000.00'),
+            is_featured=True,
+        )
+        Product.objects.create(
+            name='Не вибраний товар',
+            category=self.category,
+            price=Decimal('8000.00'),
+        )
+
+        response = self.client.get(reverse('home'))
+
+        self.assertEqual(
+            set(response.context['products']),
+            {self.product, featured_component, featured_regular_product},
+        )
+        self.assertEqual(
+            set(response.context['popular_products']),
+            {featured_component, featured_regular_product},
+        )
+        self.assertEqual(
+            set(response.context['other_products']),
+            {self.product},
+        )
+        self.assertContains(response, 'Не вибраний товар')
+        self.assertContains(response, 'Усі товари')
+
+    def test_search_includes_products_not_selected_as_popular(self):
+        response = self.client.get(reverse('home'), {'q': 'ThinkPad'})
+
+        self.assertEqual(list(response.context['products']), [self.product])
+
     def test_search_matches_multiple_words_in_product_name(self):
         response = self.client.get(reverse('home'), {'q': 'Lenovo ThinkPad'})
 
@@ -866,3 +908,137 @@ class CustomerAccountTests(TestCase):
 
         self.assertRedirects(response, reverse('order_success'))
         self.assertEqual(Order.objects.get().user, self.user)
+
+
+class VideoCardCatalogFilterTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Комплектуючі для ПК')
+        self.asus_card = Product.objects.create(
+            name='ASUS GeForce RTX 5060',
+            category=self.category,
+            component_type='graphics_card',
+            price=Decimal('18000.00'),
+            video_card_manufacturer='ASUS',
+            video_card_family='NVIDIA',
+            video_card_form_factor='стандартна',
+            video_card_purpose='ігрова',
+            video_card_chip='GeForce RTX 5060',
+            video_card_interface='PCI-Express 5.0',
+            video_card_memory_capacity='8 ГБ',
+            video_card_memory_type='GDDR7',
+            video_card_memory_bus='128 Bit',
+            video_card_connectors='2 x HDMI, 1 x DisplayPort',
+            video_card_cooling_system='активний',
+            video_card_cooling_type='кулер',
+            video_card_fan_count='2 шт',
+            video_card_power_connectors='8 pin',
+            video_card_boost_clock='2647 MHz',
+            video_card_memory_frequency='28000 MHz',
+            video_card_max_displays='4',
+            video_card_max_resolution='7680 x 4320',
+            video_card_hdcp='так',
+            video_card_recommended_psu='600 Вт',
+            video_card_directx='12 Ultimate',
+            video_card_opengl='4.6',
+            video_card_dlss='DLSS 4',
+            video_card_dimensions='300 x 125 x 44 мм',
+            video_card_weight='838 г',
+            video_card_country_of_origin='Китай',
+            video_card_warranty_months=36,
+            video_card_barcode='4711377341394',
+            video_card_note='Виробник може змінювати властивості.',
+        )
+        self.msi_card = Product.objects.create(
+            name='MSI Radeon RX 580',
+            category=self.category,
+            component_type='graphics_card',
+            price=Decimal('7000.00'),
+            video_card_manufacturer='MSI',
+            video_card_family='AMD',
+            video_card_chip='Radeon RX 580',
+            video_card_connectors='1 x DVI, 1 x VGA',
+            video_card_memory_capacity='8 ГБ',
+        )
+        Product.objects.create(
+            name='ASUS материнська плата',
+            category=self.category,
+            component_type='motherboard',
+            price=Decimal('5000.00'),
+            video_card_manufacturer='ASUS',
+        )
+        self.url = reverse('category_products', args=(self.category.pk,))
+
+    def test_video_card_catalog_has_dynamic_filter_values_and_counts(self):
+        response = self.client.get(self.url, {'component_type': 'graphics_card'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['video_card_catalog'])
+        self.assertEqual(list(response.context['products']), [self.asus_card, self.msi_card])
+        self.assertEqual(len(response.context['filter_groups']), 14)
+        self.assertContains(response, 'ASUS (1)')
+        self.assertContains(response, 'HDMI (1)')
+        self.assertContains(response, 'DisplayPort (1)')
+        self.assertContains(response, 'VGA (D-Sub) (1)')
+        self.assertNotContains(response, 'HP (1)')
+
+    def test_video_card_filters_combine_exact_and_connector_matches(self):
+        response = self.client.get(self.url, {
+            'component_type': 'graphics_card',
+            'video_card_manufacturer': 'ASUS',
+            'video_card_chip': 'GeForce RTX 5060',
+            'video_card_connectors': 'HDMI',
+            'video_card_memory_type': 'GDDR7',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.asus_card])
+
+    def test_video_card_connector_filter_matches_counted_vga_names(self):
+        response = self.client.get(self.url, {
+            'component_type': 'graphics_card',
+            'video_card_connectors': 'VGA (D-Sub)',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.msi_card])
+
+    def test_video_card_price_and_component_type_filters_are_scoped(self):
+        response = self.client.get(self.url, {
+            'component_type': 'graphics_card',
+            'price_min': '6500',
+            'price_max': '8000',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.msi_card])
+
+    def test_video_card_admin_fields_are_grouped_without_duplicates(self):
+        admin_fields = [
+            field_name
+            for _, options in ProductAdmin.fieldsets
+            for field_name in options['fields']
+            if field_name.startswith('video_card_')
+        ]
+        model_fields = {
+            field.name
+            for field in Product._meta.fields
+            if field.name.startswith('video_card_')
+        }
+
+        self.assertEqual(len(admin_fields), len(set(admin_fields)))
+        self.assertEqual(set(admin_fields), model_fields)
+
+    def test_video_card_product_page_shows_video_card_specifications(self):
+        response = self.client.get(
+            reverse('product_detail', args=(self.asus_card.pk,)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Графічний чип'], 'GeForce RTX 5060')
+        self.assertEqual(specifications['Об’єм вбудованої пам’яті'], '8 ГБ')
+        self.assertEqual(specifications['Роз’єми відеокарти'], '2 x HDMI, 1 x DisplayPort')
+        self.assertEqual(specifications['Частота ядра (Boost)'], '2647 MHz')
+        self.assertEqual(specifications['Виробник'], 'ASUS')
+        self.assertEqual(specifications['Штрихкод'], '4711377341394')
+        self.assertEqual(
+            [group['name'] for group in response.context['specification_groups']],
+            ['Основні характеристики', 'Інші'],
+        )

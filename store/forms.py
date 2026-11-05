@@ -986,3 +986,86 @@ class MotherboardProductFilterForm(LaptopProductFilterForm):
     def __init__(self, *args, products, **kwargs):
         super().__init__(*args, products=products, **kwargs)
         self.available_today_count = products.filter(motherboard_available_today=True).count()
+
+
+class VideoCardProductFilterForm(LaptopProductFilterForm):
+    filter_fields = (
+        ('video_card_manufacturer', 'Виробник'),
+        ('video_card_family', 'Сімейство графіки'),
+        ('video_card_form_factor', 'Форм-фактор'),
+        ('video_card_purpose', 'Призначення'),
+        ('video_card_chip', 'Графічний чип'),
+        ('video_card_interface', 'Інтерфейс'),
+        ('video_card_memory_capacity', 'Об’єм вбудованої пам’яті'),
+        ('video_card_memory_type', 'Тип пам’яті'),
+        ('video_card_memory_bus', 'Розрядність шини пам’яті'),
+        ('video_card_connectors', 'Роз’єми'),
+        ('video_card_cooling_system', 'Тип системи охолодження'),
+        ('video_card_cooling_type', 'Вид охолодження'),
+        ('video_card_fan_count', 'Кількість вентиляторів'),
+        ('video_card_power_connectors', 'Роз’єми додаткового живлення'),
+    )
+    multi_value_fields = ('video_card_connectors',)
+    preset_options = {
+        'video_card_manufacturer': ('Afox', 'ASUS', 'GIGABYTE', 'HP', 'MSI', 'PNY'),
+        'video_card_family': ('NVIDIA', 'AMD'),
+        'video_card_form_factor': ('міні', 'низькопрофільна', 'стандартна'),
+        'video_card_purpose': ('для майнінгу', 'звичайна', 'професійна', 'ігрова'),
+        'video_card_chip': (
+            'Quadro RTX 400',
+            'Radeon RX 580',
+            'Geforce GT 710',
+            'GeForce GT 730',
+            'Quadro RTX A1000',
+            'GeForce GT 1030',
+            'RTX PRO 2000',
+            'GeForce RTX 3050',
+            'GeForce RTX 3060',
+            'GeForce RTX 5050',
+            'GeForce RTX 5060',
+            'GeForce RTX 5060 Ti',
+            'GeForce RTX 5070',
+            'GeForce RTX 5070 Ti',
+            'GeForce RTX 5080',
+            'Radeon RX 7600',
+            'Radeon RX 9060 XT',
+            'Radeon RX 9070 GRE',
+            'Radeon RX 9070 XT',
+        ),
+        'video_card_interface': (
+            'PCI-Express 2.0',
+            'PCI-Express 3.0',
+            'PCI-Express 4.0',
+            'PCI-Express 5.0',
+        ),
+        'video_card_memory_capacity': ('2 ГБ', '4 ГБ', '6 ГБ', '8 ГБ', '12 ГБ', '16 ГБ'),
+        'video_card_memory_type': ('DDR3', 'GDDR3', 'DDR4', 'GDDR5', 'GDDR6', 'GDDR7'),
+        'video_card_memory_bus': ('64 Bit', '96 Bit', '128 Bit', '192 Bit', '256 Bit'),
+        'video_card_connectors': ('DisplayPort', 'DVI', 'HDMI', 'VGA (D-Sub)'),
+        'video_card_cooling_system': ('активний', 'пасивний'),
+        'video_card_cooling_type': ('кулер', 'радіатор', 'турбіна'),
+        'video_card_fan_count': ('1 шт', '2 шт', '3 шт'),
+        'video_card_power_connectors': (
+            'відсутнє',
+            '6 pin',
+            '8 + 8 + 8 pin',
+            '8 + 8 pin',
+            '8 pin',
+            '16 pin',
+        ),
+    }
+
+    def filter_value_aliases(self, field_name, value):
+        if field_name == 'video_card_connectors' and value.casefold() == 'vga (d-sub)':
+            return (value, 'VGA')
+        return (value.strip(),)
+
+    def normalize_filter_value(self, field_name, value):
+        value = value.strip()
+        if field_name == 'video_card_connectors':
+            for connector in self.preset_options[field_name]:
+                if connector.casefold() in value.casefold():
+                    return connector
+            if re.search(r'\bvga\b', value, re.IGNORECASE):
+                return 'VGA (D-Sub)'
+        return value

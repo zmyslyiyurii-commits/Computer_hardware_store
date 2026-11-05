@@ -54,6 +54,11 @@ class Product(models.Model):
         blank=True,
     )
     badge = models.CharField('Бейдж', max_length=50, blank=True)
+    is_featured = models.BooleanField(
+        'Показувати в «Популярне зараз»',
+        default=False,
+        help_text='Познач товар, якщо він має відображатися в блоці на головній сторінці.',
+    )
     description = models.TextField('Опис', blank=True)
     manufacturer = models.CharField('Виробник', max_length=100, blank=True)
     model_series = models.CharField('Серія (модельний ряд)', max_length=100, blank=True)
@@ -261,6 +266,39 @@ class Product(models.Model):
     motherboard_warranty_months = models.PositiveSmallIntegerField('Гарантія, міс.', blank=True, null=True)
     motherboard_barcode = models.CharField('Штрихкод', max_length=80, blank=True)
     motherboard_note = models.TextField('Примітка', blank=True)
+    video_card_manufacturer = models.CharField('Виробник', max_length=100, blank=True)
+    video_card_family = models.CharField('Сімейство графіки', max_length=50, blank=True)
+    video_card_form_factor = models.CharField('Форм-фактор відеокарти', max_length=50, blank=True)
+    video_card_purpose = models.CharField('Призначення відеокарти', max_length=50, blank=True)
+    video_card_chip = models.CharField('Графічний чип', max_length=100, blank=True)
+    video_card_interface = models.CharField('Інтерфейс відеокарти', max_length=50, blank=True)
+    video_card_memory_capacity = models.CharField('Об’єм вбудованої пам’яті', max_length=30, blank=True)
+    video_card_memory_type = models.CharField('Тип пам’яті відеокарти', max_length=30, blank=True)
+    video_card_memory_bus = models.CharField('Розрядність шини пам’яті', max_length=30, blank=True)
+    video_card_connectors = models.TextField('Роз’єми відеокарти', blank=True)
+    video_card_cooling_system = models.CharField('Тип системи охолодження', max_length=50, blank=True)
+    video_card_cooling_type = models.CharField('Вид охолодження відеокарти', max_length=50, blank=True)
+    video_card_fan_count = models.CharField('Кількість вентиляторів відеокарти', max_length=30, blank=True)
+    video_card_power_connectors = models.CharField('Роз’єми додаткового живлення відеокарти', max_length=50, blank=True)
+    video_card_boost_clock = models.CharField('Частота ядра (Boost)', max_length=30, blank=True)
+    video_card_memory_frequency = models.CharField('Частота пам’яті', max_length=30, blank=True)
+    video_card_max_displays = models.CharField('Максимальне число дисплеїв', max_length=20, blank=True)
+    video_card_max_resolution = models.CharField('Максимальна роздільна здатність', max_length=50, blank=True)
+    video_card_hdcp = models.CharField('Сумісність з HDCP', max_length=20, blank=True)
+    video_card_recommended_psu = models.CharField(
+        'Мінімальна рекомендована потужність блоку живлення',
+        max_length=30,
+        blank=True,
+    )
+    video_card_directx = models.CharField('Версія DirectX', max_length=30, blank=True)
+    video_card_opengl = models.CharField('Версія OpenGL', max_length=30, blank=True)
+    video_card_dlss = models.CharField('Версія DLSS', max_length=50, blank=True)
+    video_card_dimensions = models.CharField('Розміри', max_length=50, blank=True)
+    video_card_weight = models.CharField('Вага', max_length=30, blank=True)
+    video_card_country_of_origin = models.CharField('Країна виробництва', max_length=100, blank=True)
+    video_card_warranty_months = models.PositiveSmallIntegerField('Гарантія, міс.', blank=True, null=True)
+    video_card_barcode = models.CharField('Штрихкод', max_length=80, blank=True)
+    video_card_note = models.TextField('Примітка', blank=True)
     # Неопубліковані товари залишаються в адмінці, але не показуються покупцям.
     is_active = models.BooleanField('Опублікований', default=True)
     created_at = models.DateTimeField('Додано', auto_now_add=True)

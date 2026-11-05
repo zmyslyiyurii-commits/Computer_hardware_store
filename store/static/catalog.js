@@ -143,18 +143,16 @@ function initializeCarousels() {
     });
 
     const allProductsButton = document.querySelector('.all-products-button');
-    const productsTrack = document.querySelector('#products-carousel');
-    if (allProductsButton && productsTrack) {
-        const controls = document.querySelector('[aria-label="Перегортання товарів"]');
+    const otherProductsSection = document.querySelector('#other-products');
+    if (allProductsButton && otherProductsSection) {
         allProductsButton.addEventListener('click', () => {
-            const expanded = productsTrack.classList.toggle('is-expanded');
+            const expanded = otherProductsSection.hidden;
+            otherProductsSection.hidden = !expanded;
             allProductsButton.setAttribute('aria-expanded', String(expanded));
-            allProductsButton.textContent = expanded ? 'Показати стрічкою ↗' : 'Усі товари ↗';
-            if (controls) {
-                controls.hidden = expanded;
+            allProductsButton.textContent = expanded ? 'Сховати інші товари ↗' : 'Усі товари ↗';
+            if (expanded) {
+                otherProductsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
-            productsTrack.scrollTo({ left: 0, behavior: 'smooth' });
-            productsTrack.dispatchEvent(new Event('scroll'));
         });
     }
 }

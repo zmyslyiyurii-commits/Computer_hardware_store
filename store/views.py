@@ -21,6 +21,7 @@ from store.forms import (
     ProductReviewForm,
     ProfileDetailsForm,
     RegistrationForm,
+    VideoCardProductFilterForm,
 )
 from store.models import Category, CustomerProfile, Order, OrderItem, Product, Review
 
@@ -107,9 +108,16 @@ class HomeView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         query = self.request.GET.get('q', '').strip()
-        products = _search_products(query) if query else Product.objects.filter(
+        active_products = Product.objects.filter(
             is_active=True,
         ).select_related('category')
+        products = _search_products(query) if query else active_products
+        context['popular_products'] = (
+            products if query else active_products.filter(is_featured=True)
+        )
+        context['other_products'] = (
+            active_products.filter(is_featured=False) if not query else Product.objects.none()
+        )
         context['products'] = products
         context['search_query'] = query
         context['categories'] = Category.objects.all()
@@ -244,6 +252,7 @@ class CategoryProductsView(TemplateView):
             context['component_category'] = True
             context['processor_catalog'] = selected_type == 'processor'
             context['motherboard_catalog'] = selected_type == 'motherboard'
+            context['video_card_catalog'] = selected_type == 'graphics_card'
         context['filter_groups'] = ()
         context['filter_form'] = None
         context['placeholder_filter_groups'] = ()
@@ -263,6 +272,11 @@ class CategoryProductsView(TemplateView):
             and self.request.GET.get('component_type') == 'motherboard'
         ):
             filter_form_class = MotherboardProductFilterForm
+        elif (
+            _is_computer_components_category(category)
+            and self.request.GET.get('component_type') == 'graphics_card'
+        ):
+            filter_form_class = VideoCardProductFilterForm
 
         if filter_form_class:
             base_products = context['products']
@@ -313,14 +327,17 @@ class CategoryProductsView(TemplateView):
                             matching_values = Q()
                             for value in selected_values:
                                 for alias in filter_form.filter_value_aliases(field_name, value):
-                                    matching_values |= (
-                                        Q(**{f'{field_name}__iexact': alias})
-                                        | Q(**{f'{field_name}__istartswith': f'{alias},'})
-                                        | Q(**{f'{field_name}__icontains': f', {alias},'})
-                                        | Q(**{f'{field_name}__icontains': f',{alias},'})
-                                        | Q(**{f'{field_name}__iendswith': f', {alias}'})
-                                        | Q(**{f'{field_name}__iendswith': f',{alias}'})
-                                    )
+                                    if field_name == 'video_card_connectors':
+                                        matching_values |= Q(**{f'{field_name}__icontains': alias})
+                                    else:
+                                        matching_values |= (
+                                            Q(**{f'{field_name}__iexact': alias})
+                                            | Q(**{f'{field_name}__istartswith': f'{alias},'})
+                                            | Q(**{f'{field_name}__icontains': f', {alias},'})
+                                            | Q(**{f'{field_name}__icontains': f',{alias},'})
+                                            | Q(**{f'{field_name}__iendswith': f', {alias}'})
+                                            | Q(**{f'{field_name}__iendswith': f',{alias}'})
+                                        )
                             context['products'] = context['products'].filter(matching_values)
                         else:
                             matching_values = Q()
@@ -336,6 +353,42 @@ class CategoryProductsView(TemplateView):
 
 class ProductDetailView(TemplateView):
     template_name = 'product_detail.html'
+
+    video_card_specification_groups = (
+        ('Основні характеристики', (
+            'video_card_family',
+            'video_card_form_factor',
+            'video_card_purpose',
+            'video_card_chip',
+            'video_card_interface',
+            'video_card_memory_capacity',
+            'video_card_memory_type',
+            'video_card_memory_bus',
+            'video_card_boost_clock',
+            'video_card_memory_frequency',
+            'video_card_max_displays',
+            'video_card_max_resolution',
+            'video_card_hdcp',
+            'video_card_connectors',
+            'video_card_cooling_system',
+            'video_card_cooling_type',
+            'video_card_fan_count',
+            'video_card_power_connectors',
+            'video_card_recommended_psu',
+            'video_card_directx',
+            'video_card_opengl',
+            'video_card_dlss',
+            'video_card_dimensions',
+            'video_card_weight',
+        )),
+        ('Інші', (
+            'video_card_manufacturer',
+            'video_card_country_of_origin',
+            'video_card_warranty_months',
+            'video_card_barcode',
+            'video_card_note',
+        )),
+    )
 
     motherboard_specification_groups = (
         ('Основні характеристики', (
@@ -625,6 +678,11 @@ class ProductDetailView(TemplateView):
             and product.component_type == 'processor'
         ):
             specification_groups = self.processor_specification_groups
+        elif (
+            _is_computer_components_category(product.category)
+            and product.component_type == 'graphics_card'
+        ):
+            specification_groups = self.video_card_specification_groups
         elif (
             _is_computer_components_category(product.category)
             and product.component_type == 'motherboard'

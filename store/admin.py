@@ -55,15 +55,34 @@ class ProductAdminForm(forms.ModelForm):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     form = ProductAdminForm
-    list_display = ('name', 'category', 'price', 'stock_quantity', 'is_active', 'created_at')
-    list_filter = ('is_active', 'category')
+    list_display = (
+        'name',
+        'category',
+        'price',
+        'stock_quantity',
+        'is_featured',
+        'is_active',
+        'created_at',
+    )
+    list_filter = ('is_featured', 'is_active', 'category')
     search_fields = ('name', 'category__name')
-    list_editable = ('stock_quantity', 'is_active')
+    list_editable = ('stock_quantity', 'is_featured', 'is_active')
     inlines = (ProductImageInline,)
     ordering = ('-created_at',)
     fieldsets = (
         ('Основна інформація', {
-            'fields': ('name', 'category', 'component_type', 'price', 'stock_quantity', 'image_url', 'badge', 'description', 'is_active'),
+            'fields': (
+                'name',
+                'category',
+                'component_type',
+                'price',
+                'stock_quantity',
+                'image_url',
+                'badge',
+                'is_featured',
+                'description',
+                'is_active',
+            ),
         }),
         ('Характеристики ноутбука', {
             'fields': (
@@ -242,6 +261,40 @@ class ProductAdmin(admin.ModelAdmin):
                 'motherboard_warranty_months',
                 'motherboard_barcode',
                 'motherboard_note',
+            ),
+            'classes': ('collapse',),
+        }),
+        ('Характеристики відеокарти', {
+            'fields': (
+                'video_card_family',
+                'video_card_form_factor',
+                'video_card_purpose',
+                'video_card_chip',
+                'video_card_interface',
+                'video_card_memory_capacity',
+                'video_card_memory_type',
+                'video_card_memory_bus',
+                'video_card_boost_clock',
+                'video_card_memory_frequency',
+                'video_card_max_displays',
+                'video_card_max_resolution',
+                'video_card_hdcp',
+                'video_card_connectors',
+                'video_card_cooling_system',
+                'video_card_cooling_type',
+                'video_card_fan_count',
+                'video_card_power_connectors',
+                'video_card_recommended_psu',
+                'video_card_directx',
+                'video_card_opengl',
+                'video_card_dlss',
+                'video_card_dimensions',
+                'video_card_weight',
+                'video_card_manufacturer',
+                'video_card_country_of_origin',
+                'video_card_warranty_months',
+                'video_card_barcode',
+                'video_card_note',
             ),
             'classes': ('collapse',),
         }),
