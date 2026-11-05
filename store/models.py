@@ -19,6 +19,17 @@ class Category(models.Model):
 
 
 class Product(models.Model):
+    COMPONENT_TYPE_CHOICES = (
+        ('processor', 'Процесори'),
+        ('motherboard', 'Материнські плати'),
+        ('graphics_card', 'Відеокарти'),
+        ('memory', "Оперативна пам’ять"),
+        ('storage', 'Накопичувачі SSD / HDD'),
+        ('case', 'Корпуси'),
+        ('power_supply', 'Блоки живлення'),
+        ('cooling', 'Системи охолодження'),
+    )
+
     # Основні дані товару, які редагуються через адміністративну панель.
     name = models.CharField('Назва', max_length=200)
     category = models.ForeignKey(
@@ -36,6 +47,12 @@ class Product(models.Model):
     )
     stock_quantity = models.PositiveIntegerField('Кількість на складі', default=0)
     image_url = models.URLField('Посилання на фото', blank=True)
+    component_type = models.CharField(
+        'Тип комплектуючого для ПК',
+        max_length=30,
+        choices=COMPONENT_TYPE_CHOICES,
+        blank=True,
+    )
     badge = models.CharField('Бейдж', max_length=50, blank=True)
     description = models.TextField('Опис', blank=True)
     manufacturer = models.CharField('Виробник', max_length=100, blank=True)
@@ -166,6 +183,35 @@ class Product(models.Model):
     computer_multichannel_audio = models.CharField('Багатоканальний звук', max_length=40, blank=True)
     computer_wired_network = models.CharField('Провідна мережа (LAN)', max_length=80, blank=True)
     computer_peripherals_included = models.CharField('Пристрої введення в комплекті', max_length=150, blank=True)
+    cpu_manufacturer = models.CharField('Виробник процесора', max_length=30, blank=True)
+    cpu_family = models.CharField('Сімейство процесора', max_length=100, blank=True)
+    cpu_socket = models.CharField('Сокет процесора', max_length=30, blank=True)
+    cpu_core_count = models.CharField('Кількість ядер процесора', max_length=30, blank=True)
+    cpu_thread_count = models.CharField('Кількість потоків процесора', max_length=30, blank=True)
+    cpu_base_clock = models.CharField('Базова тактова частота процесора', max_length=30, blank=True)
+    cpu_max_clock = models.CharField('Максимальна тактова частота процесора', max_length=30, blank=True)
+    cpu_tdp = models.CharField('Максимальний TDP процесора', max_length=30, blank=True)
+    cpu_process_technology = models.CharField('Техпроцес', max_length=30, blank=True)
+    cpu_l1_cache = models.CharField('Об’єм кеш-пам’яті 1-го рівня', max_length=30, blank=True)
+    cpu_l2_cache = models.CharField('Об’єм кеш-пам’яті 2-го рівня', max_length=30, blank=True)
+    cpu_l3_cache = models.CharField('Об’єм кеш-пам’яті 3-го рівня', max_length=30, blank=True)
+    cpu_max_memory = models.CharField('Максимальний обсяг оперативної пам’яті', max_length=30, blank=True)
+    cpu_memory_type = models.CharField('Тип оперативної пам’яті', max_length=30, blank=True)
+    cpu_max_memory_speed = models.CharField('Максимальна швидкість пам’яті', max_length=30, blank=True)
+    cpu_memory_channels = models.CharField('Кількість каналів пам’яті', max_length=20, blank=True)
+    cpu_integrated_graphics = models.CharField('Графічне ядро процесора', max_length=100, blank=True)
+    cpu_intel_generation = models.CharField('Покоління процесорів Intel', max_length=100, blank=True)
+    cpu_amd_architecture = models.CharField('Архітектура ядра AMD', max_length=50, blank=True)
+    cpu_max_temperature = models.CharField('Максимально допустима температура', max_length=30, blank=True)
+    cpu_unlocked_multiplier = models.CharField('Розблокований множник', max_length=20, blank=True)
+    cpu_pcie_version = models.CharField('Версія PCI Express', max_length=20, blank=True)
+    cpu_release_date = models.DateField('Дата виходу', blank=True, null=True)
+    cpu_package_type = models.CharField('Тип поставки процесора', max_length=40, blank=True)
+    cpu_cooling_included = models.CharField('Охолодження в комплекті', max_length=40, blank=True)
+    cpu_country_of_origin = models.CharField('Країна виробництва', max_length=100, blank=True)
+    cpu_warranty_months = models.PositiveSmallIntegerField('Гарантія, міс.', blank=True, null=True)
+    cpu_barcode = models.CharField('Штрихкод', max_length=80, blank=True)
+    cpu_note = models.TextField('Примітка до процесора', blank=True)
     # Неопубліковані товари залишаються в адмінці, але не показуються покупцям.
     is_active = models.BooleanField('Опублікований', default=True)
     created_at = models.DateTimeField('Додано', auto_now_add=True)

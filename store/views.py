@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import Avg, Q
+from django.db.models import Avg, Count, Q
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -16,6 +16,7 @@ from store.forms import (
     CheckoutForm,
     ComputerProductFilterForm,
     LaptopProductFilterForm,
+    ProcessorProductFilterForm,
     ProductReviewForm,
     ProfileDetailsForm,
     RegistrationForm,
@@ -63,6 +64,10 @@ def _get_cart_items(request):
     return items
 
 
+def _is_computer_components_category(category):
+    return category.name.strip().casefold().replace("'", '’') == 'комплектуючі для пк'
+
+
 def _search_products(query):
     products = Product.objects.filter(is_active=True).select_related('category')
     for term in query.split():
@@ -84,6 +89,8 @@ class HomeView(TemplateView):
         if query:
             category = Category.objects.filter(name__iexact=query).first()
             if category:
+                if _is_computer_components_category(category):
+                    return redirect('computer_components', category_id=category.pk)
                 return redirect(
                     'category_products',
                     category_id=category.pk,
@@ -110,9 +117,103 @@ class HomeView(TemplateView):
         return context
 
 
+class ComputerComponentsView(TemplateView):
+    template_name = 'computer_components.html'
+
+    component_cards = (
+        (
+            'processor',
+            'Процесори',
+            'Обчислювальна основа комп’ютера',
+            'https://brain.com.ua/static/images/prod_img/4/6/U0648246_1739383570.webp',
+        ),
+        (
+            'motherboard',
+            'Материнські плати',
+            'З’єднує всі компоненти системи',
+            'https://brain.com.ua/static/images/prod_img/9/2/U0763992_1738792930.webp',
+        ),
+        (
+            'graphics_card',
+            'Відеокарти',
+            'Для ігор, графіки та 3D',
+            'https://brain.com.ua/static/images/prod_img/9/6/U1043496_1747713905.webp',
+        ),
+        (
+            'memory',
+            "Оперативна пам’ять",
+            'Пам’ять для швидкої роботи системи',
+            'https://brain.com.ua/static/images/prod_img/0/5/U0559405_1739809983.webp',
+        ),
+        (
+            'storage',
+            'Накопичувачі SSD / HDD',
+            'Для системи, програм і файлів',
+            'https://brain.com.ua/static/images/prod_img/0/6/U0953606_1738404203.webp',
+        ),
+        (
+            'case',
+            'Корпуси',
+            'Основа для розміщення комплектуючих',
+            'https://brain.com.ua/static/images/prod_img/8/2/U1124682_1779297576.webp',
+        ),
+        (
+            'power_supply',
+            'Блоки живлення',
+            'Живлення всіх компонентів ПК',
+            'https://brain.com.ua/static/images/prod_img/8/8/U0931088_1738344411.webp',
+        ),
+        (
+            'cooling',
+            'Системи охолодження',
+            'Кулери та рідинне охолодження',
+            'https://brain.com.ua/static/images/prod_img/2/4/U1081824_1753417226.jpg',
+        ),
+    )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        category = get_object_or_404(
+            Category,
+            pk=self.kwargs['category_id'],
+            name='Комплектуючі для ПК',
+        )
+        counts = dict(
+            Product.objects.filter(category=category, is_active=True)
+            .values('component_type')
+            .annotate(product_count=Count('pk'))
+            .values_list('component_type', 'product_count')
+        )
+        context.update({
+            'category': category,
+            'categories': Category.objects.all(),
+            'cart_count': _cart_count(self.request),
+            'component_cards': [
+                {
+                    'type': component_type,
+                    'title': title,
+                    'description': description,
+                    'image_url': image_url,
+                    'product_count': counts.get(component_type, 0),
+                }
+                for component_type, title, description, image_url in self.component_cards
+            ],
+        })
+        return context
+
+
 class CategoryProductsView(TemplateView):
     # Сторінка каталогу відбирає товари за категорією з адреси сторінки.
     template_name = 'category_products.html'
+
+    def get(self, request, *args, **kwargs):
+        category = get_object_or_404(Category, pk=kwargs['category_id'])
+        if _is_computer_components_category(category):
+            component_type = request.GET.get('component_type')
+            valid_types = {value for value, _ in Product.COMPONENT_TYPE_CHOICES}
+            if component_type not in valid_types:
+                return redirect('computer_components', category_id=category.pk)
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -132,6 +233,15 @@ class CategoryProductsView(TemplateView):
             category=category,
             is_active=True,
         ).select_related('category')
+        if _is_computer_components_category(category):
+            selected_type = self.request.GET['component_type']
+            selected_title = dict(Product.COMPONENT_TYPE_CHOICES)[selected_type]
+            context['products'] = context['products'].filter(component_type=selected_type)
+            context['category_title'] = selected_title
+            context['selected_component_type'] = selected_type
+            context['selected_component_title'] = selected_title
+            context['component_category'] = True
+            context['processor_catalog'] = selected_type == 'processor'
         context['filter_groups'] = ()
         context['filter_form'] = None
         context['placeholder_filter_groups'] = ()
@@ -141,6 +251,11 @@ class CategoryProductsView(TemplateView):
             filter_form_class = LaptopProductFilterForm
         elif normalized_category_name == 'комп’ютери':
             filter_form_class = ComputerProductFilterForm
+        elif (
+            _is_computer_components_category(category)
+            and self.request.GET.get('component_type') == 'processor'
+        ):
+            filter_form_class = ProcessorProductFilterForm
 
         if filter_form_class:
             base_products = context['products']
@@ -207,6 +322,48 @@ class CategoryProductsView(TemplateView):
 
 class ProductDetailView(TemplateView):
     template_name = 'product_detail.html'
+
+    processor_specification_groups = (
+        ('Основні технічні характеристики', (
+            'cpu_family',
+            'cpu_socket',
+            'cpu_core_count',
+            'cpu_thread_count',
+            'cpu_base_clock',
+            'cpu_max_clock',
+            'cpu_tdp',
+            'cpu_process_technology',
+            'cpu_l1_cache',
+            'cpu_l2_cache',
+            'cpu_l3_cache',
+        )),
+        ("Пам'ять", (
+            'cpu_max_memory',
+            'cpu_memory_type',
+            'cpu_max_memory_speed',
+            'cpu_memory_channels',
+        )),
+        ('Відео', (
+            'cpu_integrated_graphics',
+        )),
+        ('Додаткові характеристики', (
+            'cpu_intel_generation',
+            'cpu_amd_architecture',
+            'cpu_max_temperature',
+            'cpu_unlocked_multiplier',
+            'cpu_pcie_version',
+            'cpu_release_date',
+            'cpu_package_type',
+            'cpu_cooling_included',
+        )),
+        ('Інші', (
+            'cpu_manufacturer',
+            'cpu_country_of_origin',
+            'cpu_warranty_months',
+            'cpu_barcode',
+            'cpu_note',
+        )),
+    )
 
     computer_specification_groups = (
         ('Основні характеристики', (
@@ -382,16 +539,25 @@ class ProductDetailView(TemplateView):
         computer_category_name = (
             product.category.name.strip().casefold().replace("'", '’')
         )
-        specification_groups = (
-            self.computer_specification_groups
-            if computer_category_name == 'комп’ютери'
-            else self.specification_groups
-        )
+        if (
+            _is_computer_components_category(product.category)
+            and product.component_type == 'processor'
+        ):
+            specification_groups = self.processor_specification_groups
+        elif computer_category_name == 'комп’ютери':
+            specification_groups = self.computer_specification_groups
+        else:
+            specification_groups = self.specification_groups
         context['specification_groups'] = [
             {
                 'name': group_name,
                 'items': [
-                    (product._meta.get_field(field_name).verbose_name, getattr(product, field_name))
+                    (
+                        product._meta.get_field(field_name).verbose_name,
+                        getattr(product, field_name).strftime('%d.%m.%Y')
+                        if field_name == 'cpu_release_date' and getattr(product, field_name)
+                        else getattr(product, field_name),
+                    )
                     for field_name in field_names
                     if getattr(product, field_name) not in (None, '')
                 ],

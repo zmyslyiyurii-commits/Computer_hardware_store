@@ -52,11 +52,20 @@
     {% endif %}
 
     <main class="page-container catalog-page">
+        {% if component_category %}
+            <a class="components-back-link" href="{% url 'computer_components' category.pk %}">← Усі комплектуючі для ПК</a>
+        {% endif %}
         <div class="catalog-title">
             <div>
                 <p class="eyebrow">Знайди свій наступний пристрій</p>
                 <h1>{{ category_title }}</h1>
-                <p class="catalog-description">Обирай техніку для роботи, навчання та відпочинку.</p>
+                <p class="catalog-description">
+                    {% if component_category %}
+                        Товари цієї групи комплектуючих для збірки ПК.
+                    {% else %}
+                        Обирай техніку для роботи, навчання та відпочинку.
+                    {% endif %}
+                </p>
             </div>
             <span class="product-count">{{ products|length }} товарів</span>
         </div>
@@ -66,10 +75,13 @@
                 <aside class="filters" aria-label="Фільтри товарів">
                     <div class="filters-heading">
                         <h2>Фільтри</h2>
-                        <a class="clear-filters" href="{% url 'category_products' category.pk %}">Очистити</a>
+                        <a class="clear-filters" href="{% url 'category_products' category.pk %}{% if component_category %}?component_type={{ selected_component_type }}{% endif %}">Очистити</a>
                     </div>
                     <form method="get" class="filter-form">
                         {% if filter_form %}
+                            {% if component_category %}
+                                <input type="hidden" name="component_type" value="{{ selected_component_type }}">
+                            {% endif %}
                             <div class="filter-list">
                                 {% if filter_form.non_field_errors %}
                                     <div class="filter-errors">{{ filter_form.non_field_errors }}</div>
@@ -173,8 +185,13 @@
                     <div class="empty-state">
                         <span class="empty-icon" aria-hidden="true">⌕</span>
                         <h2>У цій категорії поки немає товарів</h2>
-                        <p>Коли товари будуть додані через адмінпанель, вони з’являться тут.</p>
-                        <a href="{% url 'home' %}">Повернутися на головну</a>
+                        {% if component_category %}
+                            <p>Товари цієї групи з’являться тут, коли їх буде додано та позначено відповідним типом в адмінпанелі.</p>
+                            <a href="{% url 'computer_components' category.pk %}">Обрати іншу групу комплектуючих</a>
+                        {% else %}
+                            <p>Коли товари будуть додані через адмінпанель, вони з’являться тут.</p>
+                            <a href="{% url 'home' %}">Повернутися на головну</a>
+                        {% endif %}
                     </div>
                 {% endif %}
             </section>

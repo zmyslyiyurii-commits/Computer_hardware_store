@@ -1,0 +1,85 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f6f7f4">
+    <title>Комплектуючі для ПК — NEXUS</title>
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+    <link rel="stylesheet" href="{% static 'computer_components.css' %}">
+</head>
+<body>
+    <div class="topline">
+        <div class="container topline-inner">
+            <span>Техніка для роботи, гри й натхнення</span>
+            <nav class="topline-links" aria-label="Додаткова навігація">
+                <a href="{% url 'home' %}#service">Доставка та оплата</a>
+                <a href="{% url 'home' %}#service">Гарантія</a>
+                <a href="{% url 'home' %}#contacts">Контакти</a>
+            </nav>
+        </div>
+    </div>
+
+    <header class="main-header">
+        <div class="container header-row">
+            <a class="logo" href="{% url 'home' %}" aria-label="NEXUS — на головну">NEXUS<span>.</span></a>
+            <button class="catalog-button" type="button" aria-expanded="false" aria-controls="catalog-drawer">
+                <span class="menu-icon" aria-hidden="true">☰</span> Каталог
+            </button>
+            <form class="search" role="search" action="{% url 'home' %}" method="get">
+                <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Знайти процесор, відеокарту, комплектуюче..." aria-label="Пошук товарів">
+                <button type="submit" aria-label="Шукати">⌕</button>
+            </form>
+            <nav class="header-actions" aria-label="Особисті розділи">
+                <a class="header-action" href="{% url 'favorites' %}"><span class="action-icon" aria-hidden="true">♡</span><span>Обране</span></a>
+                {% if user.is_authenticated %}
+                    <a class="header-action" href="{% url 'profile' %}"><span class="action-icon" aria-hidden="true">♙</span><span>Привіт, {{ user.username }}</span></a>
+                {% else %}
+                    <a class="header-action" href="{% url 'login' %}"><span class="action-icon" aria-hidden="true">♙</span><span>Увійти</span></a>
+                {% endif %}
+                <a class="header-action" href="{% url 'cart' %}"><span class="action-icon cart-icon" aria-hidden="true">▱<span class="cart-count">{{ cart_count }}</span></span><span>Кошик</span></a>
+            </nav>
+        </div>
+    </header>
+
+    {% include 'category_catalog_drawer.html' %}
+
+    <main class="container components-page">
+        <section class="components-heading" aria-labelledby="components-title">
+            <p class="eyebrow">ОБЕРИ КОМПЛЕКТУЮЧІ ДЛЯ СВОГО ПК</p>
+            <h1 id="components-title">Комплектуючі для ПК</h1>
+            <p>Обери потрібну категорію, щоб переглянути комплектуючі та підібрати деталі для збірки.</p>
+        </section>
+
+        <section class="component-grid" aria-label="Основні комплектуючі для збірки ПК">
+            {% for component in component_cards %}
+                <a class="component-card" href="{% url 'category_products' category.pk %}?component_type={{ component.type }}">
+                    <span class="component-card-icon" aria-hidden="true">
+                        {% if component.image_url %}
+                            <img src="{{ component.image_url }}" alt="" loading="lazy">
+                        {% else %}
+                            <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="23" fill="currentColor" fill-opacity=".1" stroke="currentColor" stroke-width="2.5"/><circle cx="32" cy="32" r="4" fill="currentColor"/><path d="M32 28c-7-2-10-7-8-13 7 1 11 6 10 13Zm4 4c2-7 7-10 13-8-1 7-6 11-13 10Zm-4 4c7 2 10 7 8 13-7-1-11-6-10-13Zm-4-4c-2 7-7 10-13 8 1-7 6-11 13-10Z" fill="currentColor" fill-opacity=".55" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                        {% endif %}
+                    </span>
+                    <span class="component-card-copy">
+                        <strong>{{ component.title }}</strong>
+                        <span>{{ component.description }}</span>
+                        <span class="component-card-action">
+                            {% if component.product_count %}
+                                Переглянути {{ component.product_count }} товарів
+                            {% else %}
+                                Переглянути товари
+                            {% endif %}
+                            <span aria-hidden="true">↗</span>
+                        </span>
+                    </span>
+                </a>
+            {% endfor %}
+        </section>
+
+    </main>
+
+    <script src="{% static 'catalog.js' %}" defer></script>
+</body>
+</html>

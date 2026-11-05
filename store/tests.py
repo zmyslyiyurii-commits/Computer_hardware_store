@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
+from store.admin import ProductAdminForm
 from store.models import Category, Order, OrderItem, Product, ProductImage
 
 
@@ -83,6 +84,244 @@ class ProductSearchTests(TestCase):
         )
         self.assertRedirects(response, reverse('home'))
         self.assertEqual(self.client.session['favorites'], [])
+
+    def test_catalog_lists_pc_maintenance_instead_of_storage_category(self):
+        response = self.client.get(reverse('home'))
+
+        self.assertTrue(Category.objects.filter(name='Обслуговування ПК').exists())
+        self.assertFalse(Category.objects.filter(name='Накопичувачі').exists())
+        self.assertContains(response, 'Обслуговування ПК')
+        self.assertContains(response, 'Термопаста, очищення та догляд за комп’ютером')
+        self.assertNotContains(response, 'SSD, жорсткі диски та флешнакопичувачі')
+
+
+class ComputerComponentsCatalogTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(
+            name='Комплектуючі для ПК',
+            icon='⚙',
+        )
+
+    def test_components_category_opens_component_picker(self):
+        response = self.client.get(
+            reverse('category_products', args=(self.category.pk,)),
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('computer_components', args=(self.category.pk,)),
+        )
+
+    def test_exact_category_search_opens_component_picker(self):
+        response = self.client.get(
+            reverse('home'),
+            {'q': self.category.name},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('computer_components', args=(self.category.pk,)),
+        )
+
+    def test_component_picker_shows_only_pc_build_parts(self):
+        response = self.client.get(
+            reverse('computer_components', args=(self.category.pk,)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context['component_cards']), 8)
+        for title in (
+            'Процесори',
+            'Материнські плати',
+            'Відеокарти',
+            "Оперативна пам’ять",
+            'Накопичувачі SSD / HDD',
+            'Корпуси',
+            'Блоки живлення',
+            'Системи охолодження',
+        ):
+            self.assertContains(response, title)
+        component_titles = {component['title'] for component in response.context['component_cards']}
+        self.assertNotIn('Монітори', component_titles)
+        self.assertNotIn('Маніпулятори', component_titles)
+        self.assertNotIn('Обслуговування ПК', component_titles)
+
+    def test_component_picker_links_to_products_of_selected_type(self):
+        processor = Product.objects.create(
+            name='AMD Ryzen 5',
+            category=self.category,
+            component_type='processor',
+            price=Decimal('5000.00'),
+        )
+        Product.objects.create(
+            name='Материнська плата',
+            category=self.category,
+            component_type='motherboard',
+            price=Decimal('4000.00'),
+        )
+
+        response = self.client.get(
+            reverse('category_products', args=(self.category.pk,)),
+            {'component_type': 'processor'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context['products']), [processor])
+        self.assertEqual(response.context['category_title'], 'Процесори')
+        self.assertContains(response, 'Усі комплектуючі для ПК')
+
+    def test_home_category_card_links_to_component_picker(self):
+        response = self.client.get(reverse('home'))
+
+        self.assertContains(
+            response,
+            reverse('computer_components', args=(self.category.pk,)),
+        )
+
+
+class ProcessorCatalogFilterTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Комплектуючі для ПК')
+        self.amd_processor = Product.objects.create(
+            name='AMD Ryzen 5 7600',
+            category=self.category,
+            component_type='processor',
+            price=Decimal('6500.00'),
+            stock_quantity=3,
+            cpu_manufacturer='AMD',
+            cpu_family='AMD Ryzen 5',
+            cpu_socket='AM5',
+            cpu_core_count='6 ядер',
+            cpu_thread_count='12 потоків',
+            cpu_base_clock='3.8 GHz',
+            cpu_max_clock='5.1 GHz',
+            cpu_tdp='65 Вт',
+            cpu_process_technology='7 nm',
+            cpu_l1_cache='384 KB',
+            cpu_l2_cache='3 MB',
+            cpu_l3_cache='32 MB',
+            cpu_max_memory='128 GB',
+            cpu_memory_type='DDR4',
+            cpu_max_memory_speed='3200 MHz',
+            cpu_memory_channels='2',
+            cpu_integrated_graphics='AMD Radeon Graphics',
+            cpu_amd_architecture='AMD Zen 4',
+            cpu_max_temperature='90°C',
+            cpu_unlocked_multiplier='так',
+            cpu_pcie_version='4.0',
+            cpu_release_date='2022-04-04',
+            cpu_package_type='BOX',
+            cpu_cooling_included='кулер у комплекті',
+            cpu_country_of_origin='США',
+            cpu_warranty_months=36,
+            cpu_barcode='5054444470061',
+            cpu_note='Характеристики можуть змінюватися виробником.',
+        )
+        self.out_of_stock_processor = Product.objects.create(
+            name='AMD Ryzen 7 7700',
+            category=self.category,
+            component_type='processor',
+            price=Decimal('9000.00'),
+            stock_quantity=0,
+            cpu_manufacturer='AMD',
+            cpu_family='AMD Ryzen 7',
+            cpu_socket='AM5',
+            cpu_core_count='8 ядер',
+        )
+        Product.objects.create(
+            name='Intel Core i5',
+            category=self.category,
+            component_type='processor',
+            price=Decimal('7000.00'),
+            stock_quantity=2,
+            cpu_manufacturer='INTEL',
+            cpu_family='Intel Core i5',
+            cpu_socket='1700',
+            cpu_intel_generation='Alder Lake (12 покоління)',
+        )
+        Product.objects.create(
+            name='Материнська плата',
+            category=self.category,
+            component_type='motherboard',
+            price=Decimal('4000.00'),
+            cpu_manufacturer='AMD',
+            cpu_socket='AM5',
+        )
+        self.url = reverse('category_products', args=(self.category.pk,))
+
+    def test_processor_release_date_accepts_ukrainian_date_format(self):
+        form = ProductAdminForm(data={
+            'name': 'AMD Ryzen date test',
+            'category': self.category.pk,
+            'component_type': 'processor',
+            'price': '5000',
+            'cpu_release_date': '04.04.2022',
+        })
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(
+            form.cleaned_data['cpu_release_date'].isoformat(),
+            '2022-04-04',
+        )
+
+    def test_processor_catalog_has_own_filters_and_preserves_component_type(self):
+        response = self.client.get(self.url, {'component_type': 'processor'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['processor_catalog'])
+        self.assertEqual(len(response.context['filter_groups']), 13)
+        self.assertNotContains(response, 'Наявність у магазині')
+        self.assertContains(response, 'name="component_type" value="processor"')
+        self.assertContains(response, 'AMD (2)')
+
+    def test_processor_filters_can_be_combined(self):
+        response = self.client.get(self.url, {
+            'component_type': 'processor',
+            'cpu_manufacturer': 'AMD',
+            'cpu_socket': 'AM5',
+            'cpu_amd_architecture': 'AMD Zen 4',
+        })
+
+        self.assertEqual(
+            list(response.context['products']),
+            [self.amd_processor],
+        )
+
+    def test_price_filter_applies_to_processors_only(self):
+        response = self.client.get(self.url, {
+            'component_type': 'processor',
+            'price_min': '6000',
+            'price_max': '6800',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.amd_processor])
+
+    def test_clear_filters_keeps_user_in_processor_catalog(self):
+        response = self.client.get(self.url, {'component_type': 'processor'})
+
+        self.assertContains(
+            response,
+            f'href="{self.url}?component_type=processor">Очистити',
+            html=False,
+        )
+
+    def test_processor_details_show_the_processor_specific_specifications(self):
+        response = self.client.get(
+            reverse('product_detail', args=(self.amd_processor.pk,)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Сокет процесора'], 'AM5')
+        self.assertEqual(specifications['Максимальний TDP процесора'], '65 Вт')
+        self.assertEqual(specifications['Техпроцес'], '7 nm')
+        self.assertEqual(specifications['Дата виходу'], '04.04.2022')
+        self.assertEqual(specifications['Штрихкод'], '5054444470061')
+        group_names = [group['name'] for group in response.context['specification_groups']]
+        self.assertEqual(
+            group_names,
+            ['Основні технічні характеристики', "Пам'ять", 'Відео', 'Додаткові характеристики', 'Інші'],
+        )
 
 
 class LaptopSpecificationTests(TestCase):

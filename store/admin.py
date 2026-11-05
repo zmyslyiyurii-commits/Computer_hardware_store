@@ -1,4 +1,6 @@
+from django import forms
 from django.contrib import admin, messages
+from django.contrib.admin.widgets import AdminDateWidget
 from django.utils.html import format_html, format_html_join
 from store.models import Category, CustomerProfile, Order, OrderItem, Product, ProductImage, Review
 
@@ -37,8 +39,22 @@ class ProductImageInline(admin.TabularInline):
         )
 
 
+class ProductAdminForm(forms.ModelForm):
+    cpu_release_date = forms.DateField(
+        label='Дата виходу',
+        required=False,
+        input_formats=('%d.%m.%Y', '%Y-%m-%d'),
+        widget=AdminDateWidget(attrs={'placeholder': 'дд.мм.рррр'}),
+    )
+
+    class Meta:
+        model = Product
+        fields = '__all__'
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    form = ProductAdminForm
     list_display = ('name', 'category', 'price', 'stock_quantity', 'is_active', 'created_at')
     list_filter = ('is_active', 'category')
     search_fields = ('name', 'category__name')
@@ -47,7 +63,7 @@ class ProductAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
     fieldsets = (
         ('Основна інформація', {
-            'fields': ('name', 'category', 'price', 'stock_quantity', 'image_url', 'badge', 'description', 'is_active'),
+            'fields': ('name', 'category', 'component_type', 'price', 'stock_quantity', 'image_url', 'badge', 'description', 'is_active'),
         }),
         ('Характеристики ноутбука', {
             'fields': (
@@ -150,6 +166,40 @@ class ProductAdmin(admin.ModelAdmin):
                 'computer_country_of_origin',
                 'computer_warranty_months',
                 'computer_weight',
+            ),
+            'classes': ('collapse',),
+        }),
+        ('Характеристики процесора', {
+            'fields': (
+                'cpu_manufacturer',
+                'cpu_family',
+                'cpu_socket',
+                'cpu_core_count',
+                'cpu_thread_count',
+                'cpu_base_clock',
+                'cpu_max_clock',
+                'cpu_tdp',
+                'cpu_process_technology',
+                'cpu_l1_cache',
+                'cpu_l2_cache',
+                'cpu_l3_cache',
+                'cpu_max_memory',
+                'cpu_memory_type',
+                'cpu_max_memory_speed',
+                'cpu_memory_channels',
+                'cpu_integrated_graphics',
+                'cpu_intel_generation',
+                'cpu_amd_architecture',
+                'cpu_max_temperature',
+                'cpu_unlocked_multiplier',
+                'cpu_pcie_version',
+                'cpu_release_date',
+                'cpu_package_type',
+                'cpu_cooling_included',
+                'cpu_country_of_origin',
+                'cpu_warranty_months',
+                'cpu_barcode',
+                'cpu_note',
             ),
             'classes': ('collapse',),
         }),

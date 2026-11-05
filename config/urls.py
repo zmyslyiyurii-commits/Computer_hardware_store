@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path
 from django.contrib.auth.views import LogoutView
 from store.views import (
+    ComputerComponentsView,
     CategoryProductsView,
     add_to_cart_view,
     cart_view,
@@ -38,6 +39,7 @@ urlpatterns = [
     path('', HomeView.as_view(), name='home'),
     # ID категорії визначає, товари якої категорії показати в каталозі.
     path('category/<int:category_id>/', CategoryProductsView.as_view(), name='category_products'),
+    path('category/<int:category_id>/components/', ComputerComponentsView.as_view(), name='computer_components'),
     path('product/<int:product_id>/', ProductDetailView.as_view(), name='product_detail'),
     path('cart/', cart_view, name='cart'),
     path('cart/add/<int:product_id>/', add_to_cart_view, name='add_to_cart'),

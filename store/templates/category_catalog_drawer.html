@@ -10,7 +10,7 @@
         </div>
         <nav class="catalog-drawer-list" aria-label="Категорії товарів">
             {% for category in categories %}
-                <a class="catalog-drawer-link" href="{% url 'category_products' category.pk %}">
+                <a class="catalog-drawer-link" href="{% if category.name == 'Комплектуючі для ПК' %}{% url 'computer_components' category.pk %}{% else %}{% url 'category_products' category.pk %}{% endif %}">
                     <span class="catalog-drawer-icon" aria-hidden="true">{{ category.icon|default:"▱" }}</span>
                     <span class="catalog-drawer-link-copy">
                         <strong>{{ category.name }}</strong>
@@ -27,8 +27,8 @@
                                 Клавіатури, миші та аксесуари
                             {% elif category.name == "Мережеве обладнання" %}
                                 Роутери, адаптери та мережеві пристрої
-                            {% elif category.name == "Накопичувачі" %}
-                                SSD, жорсткі диски та флешнакопичувачі
+                            {% elif category.name == "Обслуговування ПК" %}
+                                Термопаста, очищення та догляд за комп’ютером
                             {% elif category.name == "Аксесуари" %}
                                 Корисні доповнення до техніки
                             {% else %}

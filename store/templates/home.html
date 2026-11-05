@@ -101,7 +101,7 @@
             </div>
             <div class="category-grid carousel-track" id="categories-carousel">
                 {% for category in categories %}
-                    <a class="category-card" href="{% url 'category_products' category.pk %}">
+                    <a class="category-card" href="{% if category.name == 'Комплектуючі для ПК' %}{% url 'computer_components' category.pk %}{% else %}{% url 'category_products' category.pk %}{% endif %}">
                         <span class="category-icon" aria-hidden="true">{{ category.icon|default:"▱" }}</span>
                         <span>{{ category.name }}</span>
                     </a>
