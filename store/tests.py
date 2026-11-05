@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
-from store.admin import ProductAdminForm
+from store.admin import ProductAdmin, ProductAdminForm
 from store.models import Category, Order, OrderItem, Product, ProductImage
 
 
@@ -321,6 +321,180 @@ class ProcessorCatalogFilterTests(TestCase):
         self.assertEqual(
             group_names,
             ['Основні технічні характеристики', "Пам'ять", 'Відео', 'Додаткові характеристики', 'Інші'],
+        )
+
+
+class MotherboardCatalogFilterTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Комплектуючі для ПК')
+        self.asus_board = Product.objects.create(
+            name='ASUS TUF GAMING B550M-PLUS',
+            category=self.category,
+            component_type='motherboard',
+            price=Decimal('5499.00'),
+            stock_quantity=4,
+            motherboard_manufacturer='ASUS',
+            motherboard_available_today=True,
+            motherboard_purpose='геймерська',
+            motherboard_product_socket='AM4',
+            motherboard_pcie_x1_slots='2 шт',
+            motherboard_pcie_x4_slots='1 шт',
+            motherboard_pcie_x16_slots='2 шт',
+            motherboard_pci_slots='без слота PCI',
+            motherboard_chipset_model='AMD B550',
+            motherboard_ram_type='DDR4',
+            motherboard_ram_slots='4 шт',
+            motherboard_max_ram='128 GB',
+            motherboard_max_ram_frequency='4400 MHz',
+            motherboard_integrated_video='З підтримкою відеоядра процесора',
+            motherboard_lan_speed='2,5 Гбіт/с',
+            motherboard_video_outputs='HDMI, DisplayPort',
+            motherboard_usb='USB Type-C, USB 3.2',
+            motherboard_digital_audio_output='оптичний',
+            motherboard_m2_slots='2 шт',
+            motherboard_sata3_ports='4 шт',
+            motherboard_satae_slot='без SATAe інтерфейсу',
+            motherboard_u2_slot='без U.2 роз’єму',
+            motherboard_wireless='Bluetooth, 802.11 a/b/g/n/ac/ax',
+            motherboard_raid_controller='0',
+            motherboard_search_tag='материнська плата для ПК',
+            motherboard_form_factor='Micro ATX',
+            motherboard_supported_processors='AMD Ryzen 5000 Series Processors',
+            motherboard_expansion_slots='2 x PCI-E 3.0 x1, 1 x PCI-E 3.0 x16',
+            motherboard_ram_frequencies='3600 MHz, 3866 MHz, 3733 MHz',
+            motherboard_dual_channel_support='так',
+            motherboard_ecc_support='так',
+            motherboard_audio_controller='Realtek ALC887/897',
+            motherboard_multichannel_audio='7.1',
+            motherboard_lan_port_count='1 шт',
+            motherboard_network_adapter='Realtek GbE',
+            motherboard_rear_ports='4 x USB 3.2 Gen1 Type-A, 1 x VGA, 1 x HDMI',
+            motherboard_internal_ports='1 x M.2 2280, 4 x SATA 6.0 Gb/s',
+            motherboard_power_connector='1 x 24-pin, 1 x 8-pin 12V',
+            motherboard_headers='4 x USB 2.0, 2 x USB 3.2 Gen1',
+            motherboard_fan_headers='2 шт.',
+            motherboard_other_connectors='1 x COM port header, 1 x S/PDIF out header',
+            motherboard_bios_type='128 Mb Flash ROM, UEFI AMI BIOS',
+            motherboard_operating_system='Windows 10',
+            motherboard_height='244',
+            motherboard_width='244',
+            motherboard_country_of_origin='Китай',
+            motherboard_warranty_months=36,
+            motherboard_barcode='4711081154457',
+            motherboard_note='Виробник може змінювати властивості.',
+        )
+        self.msi_board = Product.objects.create(
+            name='MSI PRO B760M',
+            category=self.category,
+            component_type='motherboard',
+            price=Decimal('4200.00'),
+            motherboard_manufacturer='MSI',
+            motherboard_purpose='звичайна',
+            motherboard_product_socket='1700',
+            motherboard_chipset_model='Intel B760',
+            motherboard_ram_type='DDR5',
+            motherboard_form_factor='Micro ATX',
+        )
+        Product.objects.create(
+            name='AMD Ryzen 5 7600',
+            category=self.category,
+            component_type='processor',
+            price=Decimal('6500.00'),
+            motherboard_manufacturer='ASUS',
+        )
+        self.url = reverse('category_products', args=(self.category.pk,))
+
+    def test_motherboard_admin_fields_are_grouped_without_duplicates(self):
+        admin_fields = [
+            field_name
+            for _, options in ProductAdmin.fieldsets
+            for field_name in options['fields']
+            if field_name.startswith('motherboard_')
+        ]
+        model_fields = {
+            field.name
+            for field in Product._meta.fields
+            if field.name.startswith('motherboard_')
+        }
+        hidden_filter_fields = {
+            'motherboard_pcie_x1_slots',
+            'motherboard_pcie_x4_slots',
+            'motherboard_pcie_x16_slots',
+            'motherboard_pci_slots',
+            'motherboard_video_outputs',
+            'motherboard_usb',
+            'motherboard_digital_audio_output',
+            'motherboard_m2_slots',
+            'motherboard_sata3_ports',
+            'motherboard_satae_slot',
+            'motherboard_u2_slot',
+            'motherboard_wireless',
+        }
+
+        self.assertEqual(len(admin_fields), len(set(admin_fields)))
+        self.assertEqual(set(admin_fields), model_fields - hidden_filter_fields)
+
+    def test_motherboard_catalog_shows_dynamic_filters_and_counts(self):
+        response = self.client.get(self.url, {'component_type': 'motherboard'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context['products']), [self.asus_board, self.msi_board])
+        self.assertEqual(len(response.context['filter_groups']), 25)
+        self.assertEqual(response.context['filter_form'].available_today_count, 1)
+        self.assertContains(response, 'Отримати сьогодні (1)')
+        self.assertContains(response, 'ASUS (1)')
+        self.assertContains(response, 'AMD B550 (1)')
+
+    def test_motherboard_filters_combine_exact_and_multi_value_fields(self):
+        response = self.client.get(self.url, {
+            'component_type': 'motherboard',
+            'motherboard_manufacturer': 'ASUS',
+            'motherboard_product_socket': 'AM4',
+            'motherboard_video_outputs': 'HDMI',
+            'motherboard_form_factor': 'Micro ATX',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.asus_board])
+
+    def test_motherboard_availability_and_price_filters_apply(self):
+        response = self.client.get(self.url, {
+            'component_type': 'motherboard',
+            'available_today': 'on',
+            'price_min': '5000',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.asus_board])
+
+    def test_motherboard_product_page_shows_motherboard_specifications(self):
+        response = self.client.get(
+            reverse('product_detail', args=(self.asus_board.pk,)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Сокет материнської плати'], 'AM4')
+        self.assertEqual(specifications['Модель чипсета'], 'AMD B550')
+        self.assertEqual(specifications['Підтримка процесорів'], 'AMD Ryzen 5000 Series Processors')
+        self.assertEqual(specifications['Тип BIOS'], '128 Mb Flash ROM, UEFI AMI BIOS')
+        self.assertEqual(specifications['Штрихкод'], '4711081154457')
+        self.assertEqual(
+            [group['name'] for group in response.context['specification_groups']],
+            [
+                'Основні характеристики',
+                'Процесор',
+                'Слоти розширення',
+                'Чипсет',
+                "Оперативна пам'ять",
+                'Вбудована графіка',
+                'Звук',
+                "Провідний зв'язок",
+                "Порти і роз'єми на задній панелі",
+                "Внутрішні роз'єми і колодки",
+                'BIOS',
+                'Додатково',
+                'Фізичні характеристики',
+                'Інші',
+            ],
         )
 
 

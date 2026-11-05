@@ -86,6 +86,16 @@
                                 {% if filter_form.non_field_errors %}
                                     <div class="filter-errors">{{ filter_form.non_field_errors }}</div>
                                 {% endif %}
+                                {% if motherboard_catalog %}
+                                    <div class="filter-group motherboard-availability">
+                                        <div class="filter-options">
+                                            <label for="{{ filter_form.available_today.id_for_label }}">
+                                                {{ filter_form.available_today }}
+                                                Отримати сьогодні ({{ filter_form.available_today_count }})
+                                            </label>
+                                        </div>
+                                    </div>
+                                {% endif %}
                                 <details class="filter-group" open>
                                     <summary>Ціна<span class="chevron" aria-hidden="true">›</span></summary>
                                     <div class="price-range">

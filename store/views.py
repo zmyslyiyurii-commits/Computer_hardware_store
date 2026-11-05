@@ -16,6 +16,7 @@ from store.forms import (
     CheckoutForm,
     ComputerProductFilterForm,
     LaptopProductFilterForm,
+    MotherboardProductFilterForm,
     ProcessorProductFilterForm,
     ProductReviewForm,
     ProfileDetailsForm,
@@ -242,6 +243,7 @@ class CategoryProductsView(TemplateView):
             context['selected_component_title'] = selected_title
             context['component_category'] = True
             context['processor_catalog'] = selected_type == 'processor'
+            context['motherboard_catalog'] = selected_type == 'motherboard'
         context['filter_groups'] = ()
         context['filter_form'] = None
         context['placeholder_filter_groups'] = ()
@@ -256,6 +258,11 @@ class CategoryProductsView(TemplateView):
             and self.request.GET.get('component_type') == 'processor'
         ):
             filter_form_class = ProcessorProductFilterForm
+        elif (
+            _is_computer_components_category(category)
+            and self.request.GET.get('component_type') == 'motherboard'
+        ):
+            filter_form_class = MotherboardProductFilterForm
 
         if filter_form_class:
             base_products = context['products']
@@ -272,6 +279,13 @@ class CategoryProductsView(TemplateView):
                 if cleaned_data['price_max'] is not None:
                     context['products'] = context['products'].filter(
                         price__lte=cleaned_data['price_max'],
+                    )
+                if (
+                    isinstance(filter_form, MotherboardProductFilterForm)
+                    and cleaned_data['available_today']
+                ):
+                    context['products'] = context['products'].filter(
+                        motherboard_available_today=True,
                     )
                 for field_name, _ in filter_form.filter_fields:
                     selected_values = cleaned_data[field_name]
@@ -322,6 +336,73 @@ class CategoryProductsView(TemplateView):
 
 class ProductDetailView(TemplateView):
     template_name = 'product_detail.html'
+
+    motherboard_specification_groups = (
+        ('Основні характеристики', (
+            'motherboard_purpose',
+        )),
+        ('Процесор', (
+            'motherboard_product_socket',
+            'motherboard_supported_processors',
+        )),
+        ('Слоти розширення', (
+            'motherboard_expansion_slots',
+        )),
+        ('Чипсет', (
+            'motherboard_chipset_model',
+        )),
+        ("Оперативна пам'ять", (
+            'motherboard_ram_type',
+            'motherboard_ram_slots',
+            'motherboard_max_ram',
+            'motherboard_ram_frequencies',
+            'motherboard_dual_channel_support',
+            'motherboard_ecc_support',
+        )),
+        ('Вбудована графіка', (
+            'motherboard_integrated_video',
+        )),
+        ('Звук', (
+            'motherboard_audio_controller',
+            'motherboard_multichannel_audio',
+        )),
+        ("Провідний зв'язок", (
+            'motherboard_lan_port_count',
+            'motherboard_network_adapter',
+            'motherboard_lan_speed',
+            'motherboard_lan_speed',
+        )),
+        ("Порти і роз'єми на задній панелі", (
+            'motherboard_rear_ports',
+        )),
+        ("Внутрішні роз'єми і колодки", (
+            'motherboard_internal_ports',
+            'motherboard_power_connector',
+            'motherboard_headers',
+            'motherboard_fan_headers',
+            'motherboard_other_connectors',
+        )),
+        ('BIOS', (
+            'motherboard_bios_type',
+        )),
+        ('Додатково', (
+            'motherboard_raid_controller',
+            'motherboard_search_tag',
+            'motherboard_operating_system',
+        )),
+        ('Фізичні характеристики', (
+            'motherboard_form_factor',
+            'motherboard_height',
+            'motherboard_width',
+        )),
+        ('Інші', (
+            'motherboard_manufacturer',
+            'motherboard_country_of_origin',
+            'motherboard_warranty_months',
+            'motherboard_barcode',
+            'motherboard_note',
+        )),
+    )
 
     processor_specification_groups = (
         ('Основні технічні характеристики', (
@@ -544,6 +625,11 @@ class ProductDetailView(TemplateView):
             and product.component_type == 'processor'
         ):
             specification_groups = self.processor_specification_groups
+        elif (
+            _is_computer_components_category(product.category)
+            and product.component_type == 'motherboard'
+        ):
+            specification_groups = self.motherboard_specification_groups
         elif computer_category_name == 'комп’ютери':
             specification_groups = self.computer_specification_groups
         else:
