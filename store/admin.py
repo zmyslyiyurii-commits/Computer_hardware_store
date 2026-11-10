@@ -348,6 +348,23 @@ class ProductAdmin(admin.ModelAdmin):
             ),
             'classes': ('collapse',),
         }),
+        ('Характеристики HDD накопичувача', {
+            'fields': (
+                'hdd_drive_type',
+                'hdd_manufacturer',
+                'hdd_component_capacity',
+                'hdd_form_factor',
+                'hdd_rpm',
+                'hdd_buffer_size',
+                'hdd_interface',
+                'hdd_series',
+                'hdd_country_of_origin',
+                'hdd_warranty_months',
+                'hdd_barcode',
+                'hdd_note',
+            ),
+            'classes': ('collapse',),
+        }),
     )
 
 

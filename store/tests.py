@@ -1362,3 +1362,156 @@ class SSDCatalogFilterTests(TestCase):
         self.assertEqual(response.status_code, 200)
         specifications = dict(response.context['specifications'])
         self.assertEqual(specifications['Об’єм SSD накопичувача'], '256 GB')
+
+
+class HDDCatalogFilterTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Комплектуючі для ПК')
+        self.desktop_hdd = Product.objects.create(
+            name='Seagate IronWolf 4TB',
+            category=self.category,
+            component_type='hdd',
+            price=Decimal('4800.00'),
+            hdd_drive_type='для ПК',
+            hdd_manufacturer='Seagate',
+            hdd_component_capacity='4 TB',
+            hdd_form_factor='3.5"',
+            hdd_rpm='7200 об/хв',
+            hdd_buffer_size='256 MB',
+            hdd_interface='SATA III',
+            hdd_series='IronWolf',
+            hdd_country_of_origin='Таїланд',
+            hdd_warranty_months=24,
+            hdd_barcode='718037782881',
+            hdd_note='Характеристики можуть змінюватися виробником.',
+        )
+        self.laptop_hdd = Product.objects.create(
+            name='Toshiba L200 1TB',
+            category=self.category,
+            component_type='hdd',
+            price=Decimal('2200.00'),
+            hdd_drive_type='для ноутбука',
+            hdd_manufacturer='Toshiba',
+            hdd_component_capacity='1 TB',
+            hdd_form_factor='2.5"',
+            hdd_rpm='5400 об/хв',
+            hdd_buffer_size='128 MB',
+            hdd_interface='SATA III',
+        )
+        Product.objects.create(
+            name='SSD excluded from HDD filters',
+            category=self.category,
+            component_type='ssd',
+            price=Decimal('3000.00'),
+            hdd_manufacturer='Seagate',
+            hdd_component_capacity='4 TB',
+        )
+        self.url = reverse('category_products', args=(self.category.pk,))
+
+    def test_hdd_catalog_shows_filter_groups_and_dynamic_counts(self):
+        response = self.client.get(self.url, {'component_type': 'hdd'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['hdd_catalog'])
+        self.assertEqual(
+            list(response.context['products']),
+            [self.laptop_hdd, self.desktop_hdd],
+        )
+        self.assertEqual(len(response.context['filter_groups']), 7)
+        self.assertContains(response, 'для ПК (1)')
+        self.assertContains(response, 'Seagate (1)')
+        self.assertContains(response, '4 TB (1)')
+        self.assertContains(response, '3.5" (1)')
+        self.assertContains(response, '7200 об/хв (1)')
+        self.assertContains(response, '256 MB (1)')
+        self.assertContains(response, 'SATA III (2)')
+
+    def test_hdd_filters_can_be_combined_and_remain_scoped_to_hdd(self):
+        response = self.client.get(self.url, {
+            'component_type': 'hdd',
+            'hdd_drive_type': 'для ПК',
+            'hdd_manufacturer': 'Seagate',
+            'hdd_component_capacity': '4 TB',
+            'hdd_form_factor': '3.5"',
+            'hdd_rpm': '7200 об/хв',
+            'hdd_buffer_size': '256 MB',
+            'hdd_interface': 'SATA III',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.desktop_hdd])
+
+    def test_hdd_price_filter_only_filters_hdd_catalog(self):
+        response = self.client.get(self.url, {
+            'component_type': 'hdd',
+            'price_max': '3000',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.laptop_hdd])
+
+    def test_hdd_admin_fields_are_grouped_without_duplicates(self):
+        admin_fields = [
+            field_name
+            for _, options in ProductAdmin.fieldsets
+            for field_name in options['fields']
+            if field_name.startswith('hdd_')
+        ]
+        model_fields = {
+            field.name
+            for field in Product._meta.fields
+            if field.name.startswith('hdd_') and field.name != 'hdd_capacity'
+        }
+
+        self.assertEqual(len(admin_fields), len(set(admin_fields)))
+        self.assertEqual(set(admin_fields), model_fields)
+
+    def test_hdd_product_page_shows_grouped_hdd_specifications(self):
+        response = self.client.get(
+            reverse('product_detail', args=(self.desktop_hdd.pk,)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Об’єм'], '4 TB')
+        self.assertEqual(specifications['Швидкість обертання шпинделя'], '7200 об/хв')
+        self.assertEqual(specifications['Розмір буфера'], '256 MB')
+        self.assertEqual(specifications['Інтерфейс'], 'SATA III')
+        self.assertEqual(specifications['Форм-фактор'], '3.5"')
+        self.assertEqual(specifications['Лінійка (Серія)'], 'IronWolf')
+        self.assertEqual(specifications['Виробник'], 'Seagate')
+        self.assertEqual(specifications['Країна виробництва'], 'Таїланд')
+        self.assertEqual(specifications['Гарантія, міс'], 24)
+        self.assertEqual(specifications['Штрихкод'], '718037782881')
+        self.assertEqual(
+            [group['name'] for group in response.context['specification_groups']],
+            ['Основні характеристики', 'Інші'],
+        )
+
+    def test_hdd_product_page_uses_legacy_shared_fields_when_specific_fields_are_empty(self):
+        legacy_hdd = Product.objects.create(
+            name='Legacy HDD',
+            category=self.category,
+            component_type='hdd',
+            price=Decimal('1800.00'),
+            manufacturer='WD',
+            hdd_capacity='500 GB',
+            model_series='WD Blue',
+            country_of_origin='Таїланд',
+            warranty_months=24,
+            features='Виробник може змінювати властивості.',
+        )
+
+        response = self.client.get(
+            reverse('product_detail', args=(legacy_hdd.pk,)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Об’єм'], '500 GB')
+        self.assertEqual(specifications['Виробник'], 'WD')
+        self.assertEqual(specifications['Лінійка (Серія)'], 'WD Blue')
+        self.assertEqual(specifications['Країна виробництва'], 'Таїланд')
+        self.assertEqual(specifications['Гарантія, міс'], 24)
+        self.assertEqual(
+            specifications['Примітка'],
+            'Виробник може змінювати властивості.',
+        )

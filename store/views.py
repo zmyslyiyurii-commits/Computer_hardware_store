@@ -15,6 +15,7 @@ from django.views.generic import CreateView, TemplateView
 from store.forms import (
     CheckoutForm,
     ComputerProductFilterForm,
+    HDDProductFilterForm,
     LaptopProductFilterForm,
     MemoryProductFilterForm,
     MotherboardProductFilterForm,
@@ -261,6 +262,7 @@ class CategoryProductsView(TemplateView):
             context['video_card_catalog'] = selected_type == 'graphics_card'
             context['memory_catalog'] = selected_type == 'memory'
             context['ssd_catalog'] = selected_type == 'ssd'
+            context['hdd_catalog'] = selected_type == 'hdd'
         context['filter_groups'] = ()
         context['filter_form'] = None
         context['placeholder_filter_groups'] = ()
@@ -295,6 +297,11 @@ class CategoryProductsView(TemplateView):
             and self.request.GET.get('component_type') == 'ssd'
         ):
             filter_form_class = SSDProductFilterForm
+        elif (
+            _is_computer_components_category(category)
+            and self.request.GET.get('component_type') == 'hdd'
+        ):
+            filter_form_class = HDDProductFilterForm
 
         if filter_form_class:
             base_products = context['products']
@@ -486,6 +493,40 @@ class ProductDetailView(TemplateView):
             'ssd_note',
         )),
     )
+
+    hdd_specification_groups = (
+        ('Основні характеристики', (
+            'hdd_drive_type',
+            'hdd_component_capacity',
+            'hdd_rpm',
+            'hdd_buffer_size',
+            'hdd_interface',
+            'hdd_form_factor',
+            'hdd_series',
+        )),
+        ('Інші', (
+            'hdd_manufacturer',
+            'hdd_country_of_origin',
+            'hdd_warranty_months',
+            'hdd_barcode',
+            'hdd_note',
+        )),
+    )
+
+    hdd_specification_labels = {
+        'hdd_drive_type': 'Тип',
+        'hdd_component_capacity': 'Об’єм',
+        'hdd_rpm': 'Швидкість обертання шпинделя',
+        'hdd_buffer_size': 'Розмір буфера',
+        'hdd_interface': 'Інтерфейс',
+        'hdd_form_factor': 'Форм-фактор',
+        'hdd_series': 'Лінійка (Серія)',
+        'hdd_manufacturer': 'Виробник',
+        'hdd_country_of_origin': 'Країна виробництва',
+        'hdd_warranty_months': 'Гарантія, міс',
+        'hdd_barcode': 'Штрихкод',
+        'hdd_note': 'Примітка',
+    }
 
     motherboard_specification_groups = (
         ('Основні характеристики', (
@@ -792,6 +833,11 @@ class ProductDetailView(TemplateView):
             specification_groups = self.ssd_specification_groups
         elif (
             _is_computer_components_category(product.category)
+            and product.component_type == 'hdd'
+        ):
+            specification_groups = self.hdd_specification_groups
+        elif (
+            _is_computer_components_category(product.category)
             and product.component_type == 'motherboard'
         ):
             specification_groups = self.motherboard_specification_groups
@@ -808,6 +854,17 @@ class ProductDetailView(TemplateView):
                 and product.component_type == 'ssd'
             ):
                 return product.ssd_capacity
+            if product.component_type == 'hdd':
+                legacy_fields = {
+                    'hdd_component_capacity': 'hdd_capacity',
+                    'hdd_manufacturer': 'manufacturer',
+                    'hdd_series': 'model_series',
+                    'hdd_country_of_origin': 'country_of_origin',
+                    'hdd_warranty_months': 'warranty_months',
+                    'hdd_note': 'features',
+                }
+                if field_name in legacy_fields and not value:
+                    return getattr(product, legacy_fields[field_name])
             return value
 
         context['specification_groups'] = [
@@ -815,7 +872,12 @@ class ProductDetailView(TemplateView):
                 'name': group_name,
                 'items': [
                     (
-                        product._meta.get_field(field_name).verbose_name,
+                        self.hdd_specification_labels.get(
+                            field_name,
+                            product._meta.get_field(field_name).verbose_name,
+                        )
+                        if product.component_type == 'hdd'
+                        else product._meta.get_field(field_name).verbose_name,
                         specification_value(field_name).strftime('%d.%m.%Y')
                         if field_name == 'cpu_release_date' and specification_value(field_name)
                         else specification_value(field_name),

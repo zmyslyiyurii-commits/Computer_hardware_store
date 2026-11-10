@@ -1352,3 +1352,65 @@ class SSDProductFilterForm(LaptopProductFilterForm):
                 (label, f'{label} ({counts[label]})' if counts[label] else label)
                 for label, _, _ in ranges
             ]
+
+
+class HDDProductFilterForm(LaptopProductFilterForm):
+    filter_fields = (
+        ('hdd_drive_type', 'Тип'),
+        ('hdd_manufacturer', 'Виробник'),
+        ('hdd_component_capacity', 'Об’єм'),
+        ('hdd_form_factor', 'Форм-фактор'),
+        ('hdd_rpm', 'Швидкість обертання шпинделя'),
+        ('hdd_buffer_size', 'Розмір буферу'),
+        ('hdd_interface', 'Інтерфейс'),
+    )
+    preset_options = {
+        'hdd_drive_type': ('для ПК', 'для ноутбука', 'для сервера'),
+        'hdd_manufacturer': (
+            'Dell',
+            'HP',
+            'Seagate',
+            'Synology',
+            'Toshiba',
+            'WD',
+            'WDC Hitachi HGST',
+        ),
+        'hdd_component_capacity': (
+            '200 GB',
+            '320 GB',
+            '500 GB',
+            '20 GB',
+            '1 TB',
+            '1.2 TB',
+            '2 TB',
+            '2.4 TB',
+            '3 TB',
+            '4 TB',
+            '6 TB',
+            '8 TB',
+            '10 TB',
+            '12 TB',
+            '14 TB',
+            '16 TB',
+            '18 TB',
+            '20 TB',
+            '22 TB',
+            '24 TB',
+            '26 TB',
+            '28 TB',
+            '32 TB',
+        ),
+        'hdd_form_factor': ('2.5"', '3.5"'),
+        'hdd_rpm': ('4200 об/хв', '5400 об/хв', '5640 об/хв', '7200 об/хв'),
+        'hdd_buffer_size': (
+            '8 MB',
+            '16 MB',
+            '32 MB',
+            '64 MB',
+            '128 MB',
+            '256 MB',
+            '512 MB',
+            '1 GB',
+        ),
+        'hdd_interface': ('SATA', 'SATA II', 'SATA III', 'SAS 3.0'),
+    }
