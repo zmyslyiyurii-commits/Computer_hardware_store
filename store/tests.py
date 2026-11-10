@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from store.admin import ProductAdmin, ProductAdminForm
-from store.forms import SSDProductFilterForm
+from store.forms import MonitorProductFilterForm, SSDProductFilterForm
 from store.models import Category, Order, OrderItem, Product, ProductImage
 
 
@@ -131,11 +131,19 @@ class ProductSearchTests(TestCase):
     def test_catalog_lists_pc_maintenance_instead_of_storage_category(self):
         response = self.client.get(reverse('home'))
 
+        self.assertNotIn(
+            'Аксесуари',
+            [category.name for category in response.context['categories']],
+        )
         self.assertTrue(Category.objects.filter(name='Обслуговування ПК').exists())
         self.assertFalse(Category.objects.filter(name='Накопичувачі').exists())
         self.assertContains(response, 'Обслуговування ПК')
         self.assertContains(response, 'Термопаста, очищення та догляд за комп’ютером')
+        self.assertContains(response, 'Мережеві фільтри та подовжувачі')
+        self.assertNotContains(response, 'Мережеве обладнання')
         self.assertNotContains(response, 'SSD, жорсткі диски та флешнакопичувачі')
+        self.assertNotContains(response, 'Корисні доповнення до техніки')
+        self.assertNotContains(response, '<strong>Аксесуари</strong>', html=False)
 
 
 class ComputerComponentsCatalogTests(TestCase):
@@ -1932,6 +1940,7 @@ class CoolingCatalogFilterTests(TestCase):
 
         self.assertEqual(list(response.context['products']), [self.liquid_cooler])
 
+
     def test_cooling_catalog_price_filter_and_admin_fields(self):
         response = self.client.get(self.url, {
             'component_type': 'cooling',
@@ -1990,3 +1999,169 @@ class CoolingCatalogFilterTests(TestCase):
                 'Інші',
             ],
         )
+
+
+class MonitorCatalogFilterTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Монітори')
+        self.monitor = Product.objects.create(
+            name='AOC Gaming Monitor',
+            category=self.category,
+            price=Decimal('8999.00'),
+            manufacturer='Vinga',
+            display_diagonal='27"',
+            matrix_type='IPS',
+            resolution='2560 x 1440',
+            refresh_rate='165 Гц',
+            screen_surface='матове',
+            interfaces='HDMI, DisplayPort, USB Type-C',
+            built_in_speakers='є',
+            webcam='немає',
+            color='чорний',
+            country_of_origin='Китай',
+            warranty_months=12,
+            features='Виробник може змінювати властивості, характеристики, зовнішній вигляд і комплектацію товарів без попередження',
+            monitor_display_type='Широкоформатний, безрамковий',
+            monitor_aspect_ratio='16:9',
+            monitor_backlight='LED',
+            monitor_response_time='менше 1 мс',
+            monitor_brightness='250 кд/м2',
+            monitor_static_contrast='1000:1',
+            monitor_dynamic_contrast='10 000 000:1',
+            monitor_viewing_angles='178/178',
+            monitor_max_colors='16.7 млн',
+            monitor_image_enhancement='Low Blue Light, Flicker Free',
+            monitor_sync_technology='AMD FreeSync',
+            monitor_stand_adjustment='регулювання по висоті, регулювання нахилу',
+            monitor_tilt_angle='-5° - +15° (±3°)',
+            monitor_vesa='100x100 мм',
+            monitor_power_consumption='20.7 Вт',
+            monitor_standby_power='0.4 Вт',
+            monitor_dimensions_with_stand='542 x 380 x 200 мм',
+            monitor_dimensions_without_stand='542 x 326 x 48 мм',
+            monitor_weight_unboxed='2.85 кг',
+            monitor_weight_boxed='3.5 кг',
+        )
+        self.other_category_product = Product.objects.create(
+            name='AOC laptop, not monitor',
+            category=Category.objects.create(name='Ноутбуки'),
+            price=Decimal('9999.00'),
+            manufacturer='AOC',
+            monitor_aspect_ratio='16:9',
+        )
+        self.url = reverse('category_products', args=(self.category.pk,))
+
+    def test_monitor_catalog_shows_filter_groups_and_dynamic_values(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context['filter_groups']), 15)
+        self.assertEqual(list(response.context['products']), [self.monitor])
+        self.assertContains(response, 'Vinga (1)')
+        self.assertContains(response, 'менше 1мс (1)')
+        self.assertContains(response, 'DisplayPort (1)')
+        self.assertNotContains(response, 'AOC laptop, not monitor')
+
+    def test_monitor_catalog_combines_filters_and_response_time_range(self):
+        response = self.client.get(self.url, {
+            'manufacturer': 'Vinga',
+            'monitor_aspect_ratio': '16:9',
+            'interfaces': 'DisplayPort',
+            'monitor_response_time': 'менше 1мс',
+            'monitor_vesa': '100x100 мм',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context['products']), [self.monitor])
+
+    def test_monitor_filter_form_has_expected_fields(self):
+        form = MonitorProductFilterForm(products=Product.objects.filter(category=self.category))
+
+        self.assertEqual(
+            [field_name for field_name, _ in form.filter_fields],
+            [
+                'manufacturer',
+                'display_diagonal',
+                'matrix_type',
+                'resolution',
+                'refresh_rate',
+                'monitor_aspect_ratio',
+                'monitor_backlight',
+                'screen_surface',
+                'monitor_response_time',
+                'interfaces',
+                'monitor_stand_adjustment',
+                'monitor_vesa',
+                'built_in_speakers',
+                'webcam',
+                'color',
+            ],
+        )
+
+    def test_monitor_product_page_shows_reference_specification_groups(self):
+        response = self.client.get(reverse('product_detail', args=(self.monitor.pk,)))
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Тип монітора'], 'Широкоформатний, безрамковий')
+        self.assertEqual(specifications['Діагональ екрана'], '27"')
+        self.assertEqual(specifications['Контрастність статична'], '1000:1')
+        self.assertEqual(specifications['Технології синхронізації'], 'AMD FreeSync')
+        self.assertEqual(
+            specifications['Споживана потужність у робочому режимі'],
+            '20.7 Вт',
+        )
+        self.assertEqual(specifications['Інтерфейси та підключення'], 'HDMI, DisplayPort, USB Type-C')
+        self.assertEqual(specifications['Регулювання нахилу'], '-5° - +15° (±3°)')
+        self.assertEqual(specifications['Розміри з підставкою'], '542 x 380 x 200 мм')
+        self.assertEqual(specifications['Виробник'], 'Vinga')
+        self.assertEqual(specifications['Країна виробництва'], 'Китай')
+        self.assertEqual(specifications['Гарантія, міс'], 12)
+        self.assertEqual(specifications['Колір'], 'чорний')
+        self.assertEqual(
+            specifications['Примітка'],
+            'Виробник може змінювати властивості, характеристики, зовнішній вигляд і комплектацію товарів без попередження',
+        )
+        self.assertEqual(
+            [group['name'] for group in response.context['specification_groups']],
+            [
+                'Основні характеристики',
+                'Роз’єми й інтерфейси',
+                'Електричні параметри',
+                'Додатково',
+                'Фізичні характеристики',
+                'Інші',
+            ],
+        )
+
+    def test_monitor_admin_fields_are_unique_and_present(self):
+        admin_fields = [
+            field_name
+            for _, options in ProductAdmin.fieldsets
+            for field_name in options['fields']
+        ]
+        model_fields = {
+            field.name
+            for field in Product._meta.fields
+            if field.name.startswith('monitor_')
+        }
+        monitor_group = dict(ProductAdmin.fieldsets)['Характеристики монітора']['fields']
+        expected_monitor_fields = {
+            'display_diagonal',
+            'matrix_type',
+            'resolution',
+            'refresh_rate',
+            'screen_surface',
+            'interfaces',
+            'built_in_speakers',
+            'manufacturer',
+            'country_of_origin',
+            'warranty_months',
+            'features',
+            'color',
+        }
+
+        self.assertNotIn('Спільні характеристики товару', dict(ProductAdmin.fieldsets))
+        self.assertEqual(len(admin_fields), len(set(admin_fields)))
+        self.assertTrue(model_fields.issubset(set(admin_fields)))
+        self.assertTrue(expected_monitor_fields.issubset(set(monitor_group)))

@@ -10,6 +10,7 @@
         </div>
         <nav class="catalog-drawer-list" aria-label="Категорії товарів">
             {% for category in categories %}
+                {% if category.name != "Аксесуари" %}
                 <a class="catalog-drawer-link" href="{% if category.name == 'Комплектуючі для ПК' %}{% url 'computer_components' category.pk %}{% else %}{% url 'category_products' category.pk %}{% endif %}">
                     <span class="catalog-drawer-icon" aria-hidden="true">{{ category.icon|default:"▱" }}</span>
                     <span class="catalog-drawer-link-copy">
@@ -25,12 +26,10 @@
                                 Екрани для роботи, навчання та геймінгу
                             {% elif category.name == "Периферія" %}
                                 Клавіатури, миші та аксесуари
-                            {% elif category.name == "Мережеве обладнання" %}
-                                Роутери, адаптери та мережеві пристрої
+                            {% elif category.name == "Мережеві фільтри та подовжувачі" %}
+                                Мережеві фільтри, подовжувачі та мережеві пристрої
                             {% elif category.name == "Обслуговування ПК" %}
                                 Термопаста, очищення та догляд за комп’ютером
-                            {% elif category.name == "Аксесуари" %}
-                                Корисні доповнення до техніки
                             {% else %}
                                 Техніка та аксесуари для твого робочого місця
                             {% endif %}
@@ -38,6 +37,7 @@
                     </span>
                     <span class="catalog-drawer-arrow" aria-hidden="true">↗</span>
                 </a>
+                {% endif %}
             {% empty %}
                 <p class="empty-categories">Категорій поки немає. Створіть їх через адмінпанель.</p>
             {% endfor %}

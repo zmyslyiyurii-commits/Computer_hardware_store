@@ -20,6 +20,7 @@ from store.forms import (
     HDDProductFilterForm,
     LaptopProductFilterForm,
     MemoryProductFilterForm,
+    MonitorProductFilterForm,
     MotherboardProductFilterForm,
     PowerSupplyProductFilterForm,
     ProcessorProductFilterForm,
@@ -126,7 +127,7 @@ class HomeView(TemplateView):
         )
         context['products'] = products
         context['search_query'] = query
-        context['categories'] = Category.objects.all()
+        context['categories'] = Category.objects.exclude(name='Аксесуари')
         context['cart_count'] = _cart_count(self.request)
         context['favorite_ids'] = _favorite_ids(self.request)
         return context
@@ -278,6 +279,8 @@ class CategoryProductsView(TemplateView):
             filter_form_class = LaptopProductFilterForm
         elif normalized_category_name == 'комп’ютери':
             filter_form_class = ComputerProductFilterForm
+        elif normalized_category_name == 'монітори':
+            filter_form_class = MonitorProductFilterForm
         elif (
             _is_computer_components_category(category)
             and self.request.GET.get('component_type') == 'processor'
@@ -732,6 +735,88 @@ class ProductDetailView(TemplateView):
         )),
     )
 
+    monitor_specification_groups = (
+        ('Основні характеристики', (
+            'monitor_display_type',
+            'display_diagonal',
+            'matrix_type',
+            'resolution',
+            'refresh_rate',
+            'monitor_aspect_ratio',
+            'monitor_backlight',
+            'screen_surface',
+            'monitor_response_time',
+            'monitor_brightness',
+            'monitor_static_contrast',
+            'monitor_dynamic_contrast',
+            'monitor_viewing_angles',
+            'monitor_max_colors',
+            'monitor_image_enhancement',
+            'monitor_sync_technology',
+        )),
+        ('Роз’єми й інтерфейси', (
+            'interfaces',
+        )),
+        ('Електричні параметри', (
+            'monitor_power_consumption',
+            'monitor_standby_power',
+        )),
+        ('Додатково', (
+            'monitor_stand_adjustment',
+            'monitor_tilt_angle',
+            'monitor_vesa',
+            'built_in_speakers',
+        )),
+        ('Фізичні характеристики', (
+            'monitor_dimensions_with_stand',
+            'monitor_dimensions_without_stand',
+            'monitor_weight_unboxed',
+            'monitor_weight_boxed',
+            'color',
+        )),
+        ('Інші', (
+            'manufacturer',
+            'country_of_origin',
+            'warranty_months',
+            'features',
+        )),
+    )
+
+    monitor_specification_labels = {
+        'monitor_display_type': 'Тип монітора',
+        'display_diagonal': 'Діагональ екрана',
+        'matrix_type': 'Тип матриці',
+        'resolution': 'Роздільна здатність',
+        'refresh_rate': 'Частота оновлення екрану',
+        'monitor_aspect_ratio': 'Співвідношення сторін',
+        'monitor_backlight': 'Підсвічування',
+        'screen_surface': 'Покриття екрана',
+        'monitor_response_time': 'Час реакції матриці',
+        'monitor_brightness': 'Яскравість',
+        'monitor_static_contrast': 'Контрастність статична',
+        'monitor_dynamic_contrast': 'Контрастність динамічна',
+        'monitor_viewing_angles': 'Кути огляду (гориз./вертик.)',
+        'monitor_max_colors': 'Максимальна кількість кольорів',
+        'monitor_image_enhancement': 'Технології покращення зображення',
+        'monitor_sync_technology': 'Технології синхронізації',
+        'interfaces': 'Інтерфейси та підключення',
+        'monitor_power_consumption': 'Споживана потужність у робочому режимі',
+        'monitor_standby_power': 'Споживана потужність у режимі очікування',
+        'monitor_stand_adjustment': 'Регулювання положення',
+        'monitor_tilt_angle': 'Регулювання нахилу',
+        'monitor_vesa': 'VESA',
+        'built_in_speakers': 'Вбудовані колонки',
+        'monitor_dimensions_with_stand': 'Розміри з підставкою',
+        'monitor_dimensions_without_stand': 'Розміри без підставки',
+        'monitor_weight_unboxed': 'Вага без упаковки',
+        'monitor_weight_boxed': 'Вага з упаковкою',
+        'color': 'Колір',
+        'manufacturer': 'Виробник',
+        'country_of_origin': 'Країна виробництва',
+        'warranty_months': 'Гарантія, міс',
+        'features': 'Примітка',
+    }
+
     cooling_specification_labels = {
         'cooling_cpu_compatibility': 'Для процесорів',
         'cooling_socket': 'Сокет',
@@ -1087,6 +1172,8 @@ class ProductDetailView(TemplateView):
             and product.component_type == 'motherboard'
         ):
             specification_groups = self.motherboard_specification_groups
+        elif computer_category_name == 'монітори':
+            specification_groups = self.monitor_specification_groups
         elif computer_category_name == 'комп’ютери':
             specification_groups = self.computer_specification_groups
         else:
@@ -1130,25 +1217,28 @@ class ProductDetailView(TemplateView):
                     return getattr(product, legacy_fields[field_name])
             return value
 
+        if computer_category_name == 'монітори':
+            specification_labels = self.monitor_specification_labels
+        elif product.component_type == 'hdd':
+            specification_labels = self.hdd_specification_labels
+        elif product.component_type == 'case':
+            specification_labels = self.case_specification_labels
+        elif product.component_type == 'power_supply':
+            specification_labels = self.power_supply_specification_labels
+        elif product.component_type == 'cooling':
+            specification_labels = self.cooling_specification_labels
+        else:
+            specification_labels = {}
+
         context['specification_groups'] = [
             {
                 'name': group_name,
                 'items': [
                     (
-                        (
-                            self.hdd_specification_labels
-                            if product.component_type == 'hdd'
-                            else self.case_specification_labels
-                            if product.component_type == 'case'
-                            else self.power_supply_specification_labels
-                            if product.component_type == 'power_supply'
-                            else self.cooling_specification_labels
-                        ).get(
+                        specification_labels.get(
                             field_name,
                             product._meta.get_field(field_name).verbose_name,
-                        )
-                        if product.component_type in ('hdd', 'case', 'power_supply', 'cooling')
-                        else product._meta.get_field(field_name).verbose_name,
+                        ),
                         specification_value(field_name).strftime('%d.%m.%Y')
                         if field_name == 'cpu_release_date' and specification_value(field_name)
                         else specification_value(field_name),

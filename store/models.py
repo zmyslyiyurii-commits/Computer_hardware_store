@@ -454,6 +454,30 @@ class Product(models.Model):
     cooling_warranty_months = models.PositiveSmallIntegerField('Гарантія системи охолодження, міс.', blank=True, null=True)
     cooling_barcode = models.CharField('Штрихкод системи охолодження', max_length=80, blank=True)
     cooling_note = models.TextField('Примітка до системи охолодження', blank=True)
+    monitor_aspect_ratio = models.CharField('Співвідношення сторін монітора', max_length=20, blank=True)
+    monitor_backlight = models.CharField('Підсвічування монітора', max_length=40, blank=True)
+    monitor_response_time = models.CharField('Час реакції матриці монітора', max_length=30, blank=True)
+    monitor_stand_adjustment = models.TextField(
+        'Регулювання положення монітора',
+        blank=True,
+        help_text='Якщо значень кілька, розділяйте їх комами.',
+    )
+    monitor_vesa = models.CharField('Кріплення VESA монітора', max_length=40, blank=True)
+    monitor_display_type = models.CharField('Тип монітора', max_length=100, blank=True)
+    monitor_brightness = models.CharField('Яскравість монітора', max_length=30, blank=True)
+    monitor_static_contrast = models.CharField('Статична контрастність монітора', max_length=30, blank=True)
+    monitor_dynamic_contrast = models.CharField('Динамічна контрастність монітора', max_length=30, blank=True)
+    monitor_viewing_angles = models.CharField('Кути огляду монітора', max_length=30, blank=True)
+    monitor_max_colors = models.CharField('Максимальна кількість кольорів монітора', max_length=30, blank=True)
+    monitor_image_enhancement = models.TextField('Технології покращення зображення монітора', blank=True)
+    monitor_sync_technology = models.CharField('Технології синхронізації монітора', max_length=100, blank=True)
+    monitor_tilt_angle = models.CharField('Регулювання нахилу монітора', max_length=50, blank=True)
+    monitor_power_consumption = models.CharField('Споживана потужність монітора в робочому режимі', max_length=30, blank=True)
+    monitor_standby_power = models.CharField('Споживана потужність монітора в режимі очікування', max_length=30, blank=True)
+    monitor_dimensions_with_stand = models.CharField('Розміри монітора з підставкою', max_length=60, blank=True)
+    monitor_dimensions_without_stand = models.CharField('Розміри монітора без підставки', max_length=60, blank=True)
+    monitor_weight_unboxed = models.CharField('Вага монітора без упаковки', max_length=30, blank=True)
+    monitor_weight_boxed = models.CharField('Вага монітора з упаковкою', max_length=30, blank=True)
     # Неопубліковані товари залишаються в адмінці, але не показуються покупцям.
     is_active = models.BooleanField('Опублікований', default=True)
     created_at = models.DateTimeField('Додано', auto_now_add=True)

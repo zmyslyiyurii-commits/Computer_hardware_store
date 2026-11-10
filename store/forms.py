@@ -1701,3 +1701,105 @@ class CoolingProductFilterForm(LaptopProductFilterForm):
             (label, f'{label} ({counts[label]})' if counts[label] else label)
             for label, _, _ in self.noise_level_ranges
         ]
+
+
+class MonitorProductFilterForm(LaptopProductFilterForm):
+    response_time_ranges = (
+        ('менше 1мс', 0, Decimal('0.99')),
+        ('1мс', Decimal('1'), Decimal('1')),
+        ('2мс', Decimal('2'), Decimal('2')),
+        ('3мс', Decimal('3'), Decimal('3')),
+        ('4мс', Decimal('4'), Decimal('4')),
+        ('5мс', Decimal('5'), Decimal('5')),
+        ('6мс', Decimal('6'), Decimal('6')),
+        ('7мс', Decimal('7'), Decimal('7')),
+        ('8мс', Decimal('8'), Decimal('8')),
+        ('більше 8мс', Decimal('8.01'), None),
+    )
+    range_filter_fields = {
+        'monitor_response_time': response_time_ranges,
+    }
+    filter_fields = (
+        ('manufacturer', 'Виробник'),
+        ('display_diagonal', 'Діагональ екрана'),
+        ('matrix_type', 'Тип матриці'),
+        ('resolution', 'Роздільна здатність'),
+        ('refresh_rate', 'Частота оновлення екрану'),
+        ('monitor_aspect_ratio', 'Співвідношення сторін'),
+        ('monitor_backlight', 'Підсвічування'),
+        ('screen_surface', 'Покриття екрану'),
+        ('monitor_response_time', 'Час реакції матриці'),
+        ('interfaces', 'Інтерфейси та підключення'),
+        ('monitor_stand_adjustment', 'Регулювання положення'),
+        ('monitor_vesa', 'VESA'),
+        ('built_in_speakers', 'Вбудовані колонки'),
+        ('webcam', 'Вбудована веб-камера'),
+        ('color', 'Колір'),
+    )
+    multi_value_fields = ('interfaces', 'monitor_stand_adjustment')
+    preset_options = {
+        'manufacturer': (
+            '2E', 'Acer', 'AIWA', 'AOC', 'ASRock', 'ASUS', 'BenQ', 'Blackview',
+            'Dahua', 'Dell', 'EvroMedia', 'GIGABYTE', 'HP', 'iiyama', 'Lenovo',
+            'LG', 'Lorgar', 'MSI', 'Neovo', 'Philips', 'Prologix', 'Samsung',
+            'Thunderobot', 'Verbatim', 'ViewSonic', 'Vinga', 'Xiaomi',
+        ),
+        'display_diagonal': tuple(f'{size}"' for size in (
+            14, 15, 17, 19, 20, 22, 24, 25, 26, 27, 28, 32, 34, 38, 40, 43, 45, 49,
+        )),
+        'matrix_type': ('TN', 'IPS', 'VA', 'PLS', 'OLED'),
+        'resolution': (
+            '1280 x 1024', '1440 x 900', '1600 x 900', '1920 x 1080',
+            '1920 x 1200', '2560 x 1440', '3440 x 1440', '3840 x 1600',
+            '3840 x 2160', '5120 x 1440', '5120 x 2160', '5120 x 2880',
+            '6016 x 3384',
+        ),
+        'refresh_rate': tuple(f'{rate} Гц' for rate in (
+            60, 75, 83, 80, 100, 120, 144, 146, 155, 160, 162, 165, 170, 175,
+            180, 200, 210, 220, 240, 250, 255, 260, 280, 288, 300, 310, 320, 350,
+            360, 380, 400, 440, 480, 500, 540, 600, 610,
+        )),
+        'monitor_aspect_ratio': ('3:2', '5:4', '16:10', '16:9', '21:9', '32:9'),
+        'monitor_backlight': ('ELED', 'LED', 'Mini LED', 'Neo:LED', 'OLED', 'QD OLED', 'QLED', 'WLED'),
+        'screen_surface': (),
+        'monitor_response_time': tuple(label for label, _, _ in response_time_ranges),
+        'interfaces': (
+            'VGA', 'DVI', 'HDMI', 'DisplayPort', 'USB', 'Audio', 'Thunderbolt',
+            'USB Type-C', 'RJ', 'RS-232', 'RCA', 'S-Video', 'Card Reader',
+        ),
+        'monitor_stand_adjustment': (
+            'горизонтально (екраном догори)',
+            'немає',
+            'поворот монітора (Swivel)',
+            'поворотний екран (Pivot)',
+            'регулювання нахилу',
+            'регулювання по висоті',
+        ),
+        'monitor_vesa': ('відсутній', 'є', '75x75 мм', '100x100 мм', '200x100 мм', '200x200 мм'),
+        'built_in_speakers': (),
+        'webcam': (),
+        'color': ('білий', 'сріблястий', 'сірий', 'чорний', 'синій', 'червоний'),
+    }
+
+    @staticmethod
+    def parse_speed(value):
+        value = value or ''
+        if re.search(r'(?:менше|<)\s*1\s*(?:мс|ms)', value, re.IGNORECASE):
+            return Decimal('0.5')
+        return SSDProductFilterForm.parse_speed(value)
+
+    def __init__(self, *args, products, **kwargs):
+        super().__init__(*args, products=products, **kwargs)
+        counts = Counter()
+        for value in products.values_list('monitor_response_time', flat=True):
+            response_time = self.parse_speed(value)
+            if response_time is None:
+                continue
+            for label, minimum, maximum in self.response_time_ranges:
+                if response_time >= minimum and (maximum is None or response_time <= maximum):
+                    counts[label] += 1
+                    break
+        self.fields['monitor_response_time'].choices = [
+            (label, f'{label} ({counts[label]})' if counts[label] else label)
+            for label, _, _ in self.response_time_ranges
+        ]
