@@ -16,6 +16,7 @@ from store.forms import (
     CheckoutForm,
     ComputerProductFilterForm,
     LaptopProductFilterForm,
+    MemoryProductFilterForm,
     MotherboardProductFilterForm,
     ProcessorProductFilterForm,
     ProductReviewForm,
@@ -231,8 +232,6 @@ class CategoryProductsView(TemplateView):
         context['cart_count'] = _cart_count(self.request)
         context['favorite_ids'] = _favorite_ids(self.request)
         context['category'] = category
-        # Для назви сторінки використовуємо узгоджену множину, навіть якщо
-        # категорію в адмінці поки названо в однині.
         context['category_title'] = (
             'Ноутбуки'
             if category.name.strip().casefold().startswith('ноутбук')
@@ -253,6 +252,7 @@ class CategoryProductsView(TemplateView):
             context['processor_catalog'] = selected_type == 'processor'
             context['motherboard_catalog'] = selected_type == 'motherboard'
             context['video_card_catalog'] = selected_type == 'graphics_card'
+            context['memory_catalog'] = selected_type == 'memory'
         context['filter_groups'] = ()
         context['filter_form'] = None
         context['placeholder_filter_groups'] = ()
@@ -277,6 +277,11 @@ class CategoryProductsView(TemplateView):
             and self.request.GET.get('component_type') == 'graphics_card'
         ):
             filter_form_class = VideoCardProductFilterForm
+        elif (
+            _is_computer_components_category(category)
+            and self.request.GET.get('component_type') == 'memory'
+        ):
+            filter_form_class = MemoryProductFilterForm
 
         if filter_form_class:
             base_products = context['products']
@@ -387,6 +392,33 @@ class ProductDetailView(TemplateView):
             'video_card_warranty_months',
             'video_card_barcode',
             'video_card_note',
+        )),
+    )
+
+    memory_specification_groups = (
+        ('Основні характеристики', (
+            'memory_type',
+            'memory_capacity',
+            'memory_module_count',
+            'memory_frequency',
+            'memory_standard',
+            'memory_timing',
+            'memory_voltage',
+            'memory_cooling',
+            'memory_lighting',
+            'memory_form_factor',
+            'memory_ecc',
+            'memory_buffering',
+        )),
+        ('Додатково', (
+            'memory_additional_note',
+        )),
+        ('Інші', (
+            'memory_manufacturer',
+            'memory_country_of_origin',
+            'memory_warranty_months',
+            'memory_barcode',
+            'memory_note',
         )),
     )
 
@@ -683,6 +715,11 @@ class ProductDetailView(TemplateView):
             and product.component_type == 'graphics_card'
         ):
             specification_groups = self.video_card_specification_groups
+        elif (
+            _is_computer_components_category(product.category)
+            and product.component_type == 'memory'
+        ):
+            specification_groups = self.memory_specification_groups
         elif (
             _is_computer_components_category(product.category)
             and product.component_type == 'motherboard'

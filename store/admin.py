@@ -5,7 +5,7 @@ from django.utils.html import format_html, format_html_join
 from store.models import Category, CustomerProfile, Order, OrderItem, Product, ProductImage, Review
 
 
-# Налаштування керування категоріями в адмінці Django.
+# Налаштування керування категоріями 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'icon')
@@ -295,6 +295,31 @@ class ProductAdmin(admin.ModelAdmin):
                 'video_card_warranty_months',
                 'video_card_barcode',
                 'video_card_note',
+            ),
+            'classes': ('collapse',),
+        }),
+        ('Характеристики оперативної пам’яті', {
+            'fields': (
+                'memory_purpose',
+                'memory_manufacturer',
+                'memory_type',
+                'memory_capacity',
+                'memory_frequency',
+                'memory_module_count',
+                'memory_timing',
+                'memory_voltage',
+                'memory_cooling',
+                'memory_lighting',
+                'memory_overclock_profiles',
+                'memory_standard',
+                'memory_form_factor',
+                'memory_ecc',
+                'memory_buffering',
+                'memory_additional_note',
+                'memory_country_of_origin',
+                'memory_warranty_months',
+                'memory_barcode',
+                'memory_note',
             ),
             'classes': ('collapse',),
         }),

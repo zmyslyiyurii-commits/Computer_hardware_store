@@ -1042,3 +1042,129 @@ class VideoCardCatalogFilterTests(TestCase):
             [group['name'] for group in response.context['specification_groups']],
             ['Основні характеристики', 'Інші'],
         )
+
+
+class MemoryCatalogFilterTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Комплектуючі для ПК')
+        self.kingston_memory = Product.objects.create(
+            name='Kingston Fury DDR5 32GB',
+            category=self.category,
+            component_type='memory',
+            price=Decimal('4500.00'),
+            memory_purpose='для ПК',
+            memory_manufacturer='Kingston',
+            memory_type='DDR5',
+            memory_capacity='32 ГБ',
+            memory_frequency='5600 МГц',
+            memory_module_count='2',
+            memory_timing='CL36',
+            memory_voltage='1.25 В',
+            memory_cooling='радіатор',
+            memory_lighting='є',
+            memory_overclock_profiles='EXPO, XMP',
+            memory_standard='PC5-44800',
+            memory_form_factor='288-pin DIMM',
+            memory_ecc='ні',
+            memory_buffering='unbuffered',
+            memory_additional_note='Поставка можлива в OEM-версії.',
+            memory_country_of_origin='Тайвань',
+            memory_warranty_months=99,
+            memory_barcode='740617319903',
+            memory_note='Виробник може змінювати властивості.',
+        )
+        self.samsung_memory = Product.objects.create(
+            name='Samsung DDR4 16GB',
+            category=self.category,
+            component_type='memory',
+            price=Decimal('1800.00'),
+            memory_purpose='для ноутбуків',
+            memory_manufacturer='Samsung',
+            memory_type='DDR4',
+            memory_capacity='16 ГБ',
+            memory_frequency='3200 МГц',
+            memory_module_count='1',
+            memory_timing='CL22',
+            memory_voltage='1.2 В',
+            memory_cooling='немає',
+            memory_lighting='немає',
+        )
+        Product.objects.create(
+            name='Процесор AMD Ryzen',
+            category=self.category,
+            component_type='processor',
+            price=Decimal('6000.00'),
+            memory_manufacturer='Kingston',
+            memory_type='DDR5',
+        )
+        self.url = reverse('category_products', args=(self.category.pk,))
+
+    def test_memory_catalog_displays_filter_groups_and_dynamic_counts(self):
+        response = self.client.get(self.url, {'component_type': 'memory'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['memory_catalog'])
+        self.assertEqual(
+            list(response.context['products']),
+            [self.kingston_memory, self.samsung_memory],
+        )
+        self.assertEqual(len(response.context['filter_groups']), 11)
+        self.assertContains(response, 'Kingston (1)')
+        self.assertContains(response, 'DDR5 (1)')
+        self.assertContains(response, 'EXPO (1)')
+        self.assertContains(response, 'XMP (1)')
+
+    def test_memory_filters_combine_exact_and_multi_value_fields(self):
+        response = self.client.get(self.url, {
+            'component_type': 'memory',
+            'memory_manufacturer': 'Kingston',
+            'memory_type': 'DDR5',
+            'memory_capacity': '32 ГБ',
+            'memory_overclock_profiles': 'EXPO',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.kingston_memory])
+
+    def test_memory_price_filter_is_scoped_to_memory_products(self):
+        response = self.client.get(self.url, {
+            'component_type': 'memory',
+            'price_min': '2000',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.kingston_memory])
+
+    def test_memory_admin_fields_are_grouped_without_duplicates(self):
+        admin_fields = [
+            field_name
+            for _, options in ProductAdmin.fieldsets
+            for field_name in options['fields']
+            if field_name.startswith('memory_')
+        ]
+        model_fields = {
+            field.name
+            for field in Product._meta.fields
+            if field.name.startswith('memory_')
+        }
+
+        self.assertEqual(len(admin_fields), len(set(admin_fields)))
+        self.assertEqual(set(admin_fields), model_fields)
+
+    def test_memory_product_page_shows_memory_specifications(self):
+        response = self.client.get(
+            reverse('product_detail', args=(self.kingston_memory.pk,)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Тип пам’яті'], 'DDR5')
+        self.assertEqual(specifications['Об’єм пам’яті'], '32 ГБ')
+        self.assertEqual(specifications['Кількість модулів у наборі'], '2')
+        self.assertEqual(specifications['Стандарти пам’яті'], 'PC5-44800')
+        self.assertEqual(specifications['Таймінги'], 'CL36')
+        self.assertEqual(specifications['Форм-фактор пам’яті'], '288-pin DIMM')
+        self.assertEqual(specifications['Країна виробництва'], 'Тайвань')
+        self.assertEqual(specifications['Штрихкод'], '740617319903')
+        self.assertEqual(
+            [group['name'] for group in response.context['specification_groups']],
+            ['Основні характеристики', 'Додатково', 'Інші'],
+        )

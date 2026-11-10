@@ -299,6 +299,31 @@ class Product(models.Model):
     video_card_warranty_months = models.PositiveSmallIntegerField('Гарантія, міс.', blank=True, null=True)
     video_card_barcode = models.CharField('Штрихкод', max_length=80, blank=True)
     video_card_note = models.TextField('Примітка', blank=True)
+    memory_purpose = models.CharField('Призначення оперативної пам’яті', max_length=40, blank=True)
+    memory_manufacturer = models.CharField('Виробник', max_length=100, blank=True)
+    memory_type = models.CharField('Тип пам’яті', max_length=20, blank=True)
+    memory_capacity = models.CharField('Об’єм пам’яті', max_length=20, blank=True)
+    memory_frequency = models.CharField('Частота пам’яті', max_length=20, blank=True)
+    memory_module_count = models.CharField('Кількість модулів у наборі', max_length=20, blank=True)
+    memory_timing = models.CharField('Таймінги', max_length=20, blank=True)
+    memory_voltage = models.CharField('Напруга живлення', max_length=20, blank=True)
+    memory_cooling = models.CharField('Охолодження', max_length=30, blank=True)
+    memory_lighting = models.CharField('Підсвічування', max_length=20, blank=True)
+    memory_overclock_profiles = models.CharField(
+        'Розширені профілі розгону',
+        max_length=50,
+        blank=True,
+        help_text='Якщо профілів кілька, розділяйте їх комами.',
+    )
+    memory_standard = models.CharField('Стандарти пам’яті', max_length=40, blank=True)
+    memory_form_factor = models.CharField('Форм-фактор пам’яті', max_length=40, blank=True)
+    memory_ecc = models.CharField('Перевірка і корекція помилок (ECC)', max_length=20, blank=True)
+    memory_buffering = models.CharField('Буферизація', max_length=30, blank=True)
+    memory_additional_note = models.TextField('Додаткова примітка', blank=True)
+    memory_country_of_origin = models.CharField('Країна виробництва', max_length=100, blank=True)
+    memory_warranty_months = models.PositiveSmallIntegerField('Гарантія, міс.', blank=True, null=True)
+    memory_barcode = models.CharField('Штрихкод', max_length=80, blank=True)
+    memory_note = models.TextField('Примітка', blank=True)
     # Неопубліковані товари залишаються в адмінці, але не показуються покупцям.
     is_active = models.BooleanField('Опублікований', default=True)
     created_at = models.DateTimeField('Додано', auto_now_add=True)
