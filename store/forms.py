@@ -1632,3 +1632,72 @@ class PowerSupplyProductFilterForm(LaptopProductFilterForm):
             (label, f'{label} ({counts[label]})' if counts[label] else label)
             for label, _, _ in self.sata_connector_ranges
         ]
+
+
+class CoolingProductFilterForm(LaptopProductFilterForm):
+    noise_level_ranges = (
+        ('менше 25 дБ', 0, 24),
+        ('25 - 29 дБ', 25, 29),
+        ('30 - 34 дБ', 30, 34),
+        ('від 35 дБ', 35, None),
+    )
+    range_filter_fields = {
+        'cooling_noise_level': noise_level_ranges,
+    }
+    filter_fields = (
+        ('cooling_manufacturer', 'Виробник'),
+        ('cooling_cpu_compatibility', 'Для процесорів'),
+        ('cooling_socket', 'Сокет'),
+        ('cooling_fan_count', 'Кількість вентиляторів'),
+        ('cooling_fan_diameter', 'Діаметр вентиляторів'),
+        ('cooling_lighting', 'Підсвічування'),
+        ('cooling_max_tdp', 'Максимальний TDP'),
+        ('cooling_noise_level', 'Рівень шуму'),
+        ('cooling_color', 'Колір'),
+    )
+    multi_value_fields = ('cooling_cpu_compatibility', 'cooling_socket')
+    preset_options = {
+        'cooling_manufacturer': (
+            '1stPlayer', 'AeroCool', 'ALSEYE', 'APNX', 'Arctic', 'ASRock', 'ASUS',
+            'Azza', 'Cooler Master', 'Corsair', 'Cougar', 'Deepcool', 'Enermax',
+            'Fractal Design', 'Gamemax', 'GIGABYTE', 'Hyte', 'ID-Cooling', 'JONSBO',
+            'Lian Li', 'Machenike', 'MONTECH', 'MSI', 'Noctua', 'NZXT', 'OCYPUS',
+            'PcCooler', 'Qube', 'ThermalTake', 'Vinga', 'Xilence',
+        ),
+        'cooling_cpu_compatibility': ('INTEL', 'AMD'),
+        'cooling_socket': (
+            '775', '1150', '1151', '1151-V2', '1155', '1156', '1200', '1356',
+            '1366', '1700', '1851', '2011', '2011-3', '2066', 'AM2', 'AM2+',
+            'AM3', 'AM3+', 'AM4', 'AM5', 'FM1', 'FM2', 'FM2+', 'LGA 2011',
+            'SP5', 'TR4', 'TR5', 'TRX4',
+        ),
+        'cooling_fan_count': ('1', '2', '3'),
+        'cooling_fan_diameter': ('120 мм', '140 мм'),
+        'cooling_lighting': ('ARGB', 'LED', 'RGB', 'немає'),
+        'cooling_max_tdp': tuple(
+            f'{value} Вт'
+            for value in (100, 130, 150, 170, 180, 190, 240, 250, 260, 280, 290, 300, 320, 330, 350, 360, 370, 400)
+        ),
+        'cooling_noise_level': tuple(label for label, _, _ in noise_level_ranges),
+        'cooling_color': ('білий', 'чорний', 'шампань'),
+    }
+
+    @staticmethod
+    def parse_speed(value):
+        return SSDProductFilterForm.parse_speed(value)
+
+    def __init__(self, *args, products, **kwargs):
+        super().__init__(*args, products=products, **kwargs)
+        counts = Counter()
+        for value in products.values_list('cooling_noise_level', flat=True):
+            noise_level = self.parse_speed(value)
+            if noise_level is None:
+                continue
+            for label, minimum, maximum in self.noise_level_ranges:
+                if noise_level >= minimum and (maximum is None or noise_level <= maximum):
+                    counts[label] += 1
+                    break
+        self.fields['cooling_noise_level'].choices = [
+            (label, f'{label} ({counts[label]})' if counts[label] else label)
+            for label, _, _ in self.noise_level_ranges
+        ]

@@ -1838,3 +1838,155 @@ class PowerSupplyCatalogFilterTests(TestCase):
         specifications = dict(response.context['specifications'])
         self.assertEqual(specifications['Країна виробництва'], 'Китай')
         self.assertEqual(specifications['Гарантія, міс'], 12)
+
+
+class CoolingCatalogFilterTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Комплектуючі для ПК')
+        self.liquid_cooler = Product.objects.create(
+            name='Arctic Liquid Freezer III 360',
+            category=self.category,
+            component_type='cooling',
+            price=Decimal('4800.00'),
+            cooling_manufacturer='Arctic',
+            cooling_cpu_compatibility='INTEL, AMD',
+            cooling_socket='1700, AM4, AM5',
+            cooling_fan_count='3',
+            cooling_fan_diameter='120 мм',
+            cooling_lighting='ARGB',
+            cooling_max_tdp='350 Вт',
+            cooling_max_fan_speed='2500 об/хв',
+            cooling_radiator_material='алюміній',
+            cooling_airflow='80.95 CFM',
+            cooling_fan_speed_control='так',
+            cooling_pump_power_connector='3-pin (помпа)',
+            cooling_fan_power_connector='4-pin (вентилятор)',
+            cooling_pump_voltage='12 В',
+            cooling_tube_length='380 мм',
+            cooling_radiator_dimensions='272 x 121 x 27 мм',
+            cooling_fan_dimensions='120 x 120 x 25 мм',
+            cooling_pump_dimensions='80 x 80 x 45 мм',
+            cooling_noise_level='28 дБ',
+            cooling_color='чорний',
+            cooling_country_of_origin='Китай',
+            cooling_warranty_months=120,
+            cooling_barcode='4711081886754',
+            cooling_note='Виробник може змінювати властивості.',
+        )
+        self.air_cooler = Product.objects.create(
+            name='Noctua NH-U12S',
+            category=self.category,
+            component_type='cooling',
+            price=Decimal('3200.00'),
+            cooling_manufacturer='Noctua',
+            cooling_cpu_compatibility='INTEL, AMD',
+            cooling_socket='1151, 1200, 1700, AM4',
+            cooling_fan_count='1',
+            cooling_fan_diameter='120 мм',
+            cooling_lighting='немає',
+            cooling_max_tdp='250 Вт',
+            cooling_noise_level='22 дБ',
+            cooling_color='шампань',
+        )
+        Product.objects.create(
+            name='PSU excluded from cooling filters',
+            category=self.category,
+            component_type='power_supply',
+            price=Decimal('5000.00'),
+            cooling_manufacturer='Arctic',
+        )
+        self.url = reverse('category_products', args=(self.category.pk,))
+
+    def test_cooling_catalog_shows_filter_groups_and_dynamic_noise_buckets(self):
+        response = self.client.get(self.url, {'component_type': 'cooling'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['cooling_catalog'])
+        self.assertEqual(
+            list(response.context['products']),
+            [self.air_cooler, self.liquid_cooler],
+        )
+        self.assertEqual(len(response.context['filter_groups']), 9)
+        self.assertContains(response, 'Arctic (1)')
+        self.assertContains(response, 'INTEL (2)')
+        self.assertContains(response, 'AM5 (1)')
+        self.assertContains(response, '3 (1)')
+        self.assertContains(response, 'ARGB (1)')
+        self.assertContains(response, '350 Вт (1)')
+        self.assertContains(response, 'менше 25 дБ (1)')
+        self.assertContains(response, '25 - 29 дБ (1)')
+
+    def test_cooling_filters_combine_multi_values_and_noise_range(self):
+        response = self.client.get(self.url, {
+            'component_type': 'cooling',
+            'cooling_manufacturer': 'Arctic',
+            'cooling_cpu_compatibility': 'AMD',
+            'cooling_socket': 'AM5',
+            'cooling_fan_count': '3',
+            'cooling_fan_diameter': '120 мм',
+            'cooling_lighting': 'ARGB',
+            'cooling_max_tdp': '350 Вт',
+            'cooling_noise_level': '25 - 29 дБ',
+            'cooling_color': 'чорний',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.liquid_cooler])
+
+    def test_cooling_catalog_price_filter_and_admin_fields(self):
+        response = self.client.get(self.url, {
+            'component_type': 'cooling',
+            'price_max': '3500',
+        })
+        self.assertEqual(list(response.context['products']), [self.air_cooler])
+
+        admin_fields = [
+            field_name
+            for _, options in ProductAdmin.fieldsets
+            for field_name in options['fields']
+            if field_name.startswith('cooling_')
+        ]
+        model_fields = {
+            field.name
+            for field in Product._meta.fields
+            if field.name.startswith('cooling_')
+        }
+        self.assertEqual(len(admin_fields), len(set(admin_fields)))
+        self.assertEqual(set(admin_fields), model_fields)
+
+    def test_cooling_product_page_shows_grouped_specifications(self):
+        response = self.client.get(
+            reverse('product_detail', args=(self.liquid_cooler.pk,)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Для процесорів'], 'INTEL, AMD')
+        self.assertEqual(specifications['Сокет'], '1700, AM4, AM5')
+        self.assertEqual(specifications['Кількість вентиляторів'], '3')
+        self.assertEqual(specifications['Максимальна частота обертів'], '2500 об/хв')
+        self.assertEqual(specifications['Матеріал радіатора'], 'алюміній')
+        self.assertEqual(specifications['Повітряний потік'], '80.95 CFM')
+        self.assertEqual(specifications['Управління швидкістю обертання'], 'так')
+        self.assertEqual(specifications['Роз’єм живлення помпи'], '3-pin (помпа)')
+        self.assertEqual(specifications['Роз’єм живлення вентиляторів'], '4-pin (вентилятор)')
+        self.assertEqual(specifications['Напруга живлення'], '12 В')
+        self.assertEqual(specifications['Довжина патрубків'], '380 мм')
+        self.assertEqual(specifications['Максимальний TDP'], '350 Вт')
+        self.assertEqual(specifications['Рівень шуму'], '28 дБ')
+        self.assertEqual(specifications['Розміри радіатора'], '272 x 121 x 27 мм')
+        self.assertEqual(specifications['Розміри вентиляторів'], '120 x 120 x 25 мм')
+        self.assertEqual(specifications['Розмір водоблоку'], '80 x 80 x 45 мм')
+        self.assertEqual(specifications['Виробник'], 'Arctic')
+        self.assertEqual(specifications['Країна виробництва'], 'Китай')
+        self.assertEqual(specifications['Гарантія, міс'], 120)
+        self.assertEqual(specifications['Штрихкод'], '4711081886754')
+        self.assertEqual(specifications['Примітка'], 'Виробник може змінювати властивості.')
+        self.assertEqual(
+            [group['name'] for group in response.context['specification_groups']],
+            [
+                'Основні характеристики',
+                'Додаткові характеристики',
+                'Фізичні характеристики',
+                'Інші',
+            ],
+        )

@@ -16,6 +16,7 @@ from store.forms import (
     CheckoutForm,
     ComputerCaseProductFilterForm,
     ComputerProductFilterForm,
+    CoolingProductFilterForm,
     HDDProductFilterForm,
     LaptopProductFilterForm,
     MemoryProductFilterForm,
@@ -267,6 +268,7 @@ class CategoryProductsView(TemplateView):
             context['hdd_catalog'] = selected_type == 'hdd'
             context['case_catalog'] = selected_type == 'case'
             context['power_supply_catalog'] = selected_type == 'power_supply'
+            context['cooling_catalog'] = selected_type == 'cooling'
         context['filter_groups'] = ()
         context['filter_form'] = None
         context['placeholder_filter_groups'] = ()
@@ -316,6 +318,11 @@ class CategoryProductsView(TemplateView):
             and self.request.GET.get('component_type') == 'power_supply'
         ):
             filter_form_class = PowerSupplyProductFilterForm
+        elif (
+            _is_computer_components_category(category)
+            and self.request.GET.get('component_type') == 'cooling'
+        ):
+            filter_form_class = CoolingProductFilterForm
 
         if filter_form_class:
             base_products = context['products']
@@ -690,6 +697,68 @@ class ProductDetailView(TemplateView):
         'features': 'Примітка',
     }
 
+    cooling_specification_groups = (
+        ('Основні характеристики', (
+            'cooling_cpu_compatibility',
+            'cooling_socket',
+            'cooling_fan_count',
+            'cooling_fan_diameter',
+            'cooling_lighting',
+            'cooling_max_fan_speed',
+        )),
+        ('Додаткові характеристики', (
+            'cooling_radiator_material',
+            'cooling_airflow',
+            'cooling_fan_speed_control',
+            'cooling_pump_power_connector',
+            'cooling_fan_power_connector',
+            'cooling_pump_voltage',
+            'cooling_tube_length',
+            'cooling_max_tdp',
+            'cooling_noise_level',
+        )),
+        ('Фізичні характеристики', (
+            'cooling_radiator_dimensions',
+            'cooling_fan_dimensions',
+            'cooling_pump_dimensions',
+            'cooling_color',
+        )),
+        ('Інші', (
+            'cooling_manufacturer',
+            'cooling_country_of_origin',
+            'cooling_warranty_months',
+            'cooling_barcode',
+            'cooling_note',
+        )),
+    )
+
+    cooling_specification_labels = {
+        'cooling_cpu_compatibility': 'Для процесорів',
+        'cooling_socket': 'Сокет',
+        'cooling_fan_count': 'Кількість вентиляторів',
+        'cooling_fan_diameter': 'Діаметр вентиляторів',
+        'cooling_lighting': 'Підсвічування',
+        'cooling_max_fan_speed': 'Максимальна частота обертів',
+        'cooling_radiator_material': 'Матеріал радіатора',
+        'cooling_airflow': 'Повітряний потік',
+        'cooling_fan_speed_control': 'Управління швидкістю обертання',
+        'cooling_pump_power_connector': 'Роз’єм живлення помпи',
+        'cooling_fan_power_connector': 'Роз’єм живлення вентиляторів',
+        'cooling_pump_voltage': 'Напруга живлення',
+        'cooling_tube_length': 'Довжина патрубків',
+        'cooling_max_tdp': 'Максимальний TDP',
+        'cooling_noise_level': 'Рівень шуму',
+        'cooling_radiator_dimensions': 'Розміри радіатора',
+        'cooling_fan_dimensions': 'Розміри вентиляторів',
+        'cooling_pump_dimensions': 'Розмір водоблоку',
+        'cooling_color': 'Колір',
+        'cooling_manufacturer': 'Виробник',
+        'cooling_country_of_origin': 'Країна виробництва',
+        'cooling_warranty_months': 'Гарантія, міс',
+        'cooling_barcode': 'Штрихкод',
+        'cooling_note': 'Примітка',
+    }
+
     motherboard_specification_groups = (
         ('Основні характеристики', (
             'motherboard_purpose',
@@ -1010,6 +1079,11 @@ class ProductDetailView(TemplateView):
             specification_groups = self.power_supply_specification_groups
         elif (
             _is_computer_components_category(product.category)
+            and product.component_type == 'cooling'
+        ):
+            specification_groups = self.cooling_specification_groups
+        elif (
+            _is_computer_components_category(product.category)
             and product.component_type == 'motherboard'
         ):
             specification_groups = self.motherboard_specification_groups
@@ -1025,6 +1099,15 @@ class ProductDetailView(TemplateView):
                     'psu_manufacturer': 'manufacturer',
                     'psu_country_of_origin': 'country_of_origin',
                     'psu_warranty_months': 'warranty_months',
+                }
+                if field_name in legacy_fields and not value:
+                    return getattr(product, legacy_fields[field_name])
+            if product.component_type == 'cooling':
+                legacy_fields = {
+                    'cooling_manufacturer': 'manufacturer',
+                    'cooling_country_of_origin': 'country_of_origin',
+                    'cooling_warranty_months': 'warranty_months',
+                    'cooling_note': 'features',
                 }
                 if field_name in legacy_fields and not value:
                     return getattr(product, legacy_fields[field_name])
@@ -1058,11 +1141,13 @@ class ProductDetailView(TemplateView):
                             else self.case_specification_labels
                             if product.component_type == 'case'
                             else self.power_supply_specification_labels
+                            if product.component_type == 'power_supply'
+                            else self.cooling_specification_labels
                         ).get(
                             field_name,
                             product._meta.get_field(field_name).verbose_name,
                         )
-                        if product.component_type in ('hdd', 'case', 'power_supply')
+                        if product.component_type in ('hdd', 'case', 'power_supply', 'cooling')
                         else product._meta.get_field(field_name).verbose_name,
                         specification_value(field_name).strftime('%d.%m.%Y')
                         if field_name == 'cpu_release_date' and specification_value(field_name)

@@ -422,6 +422,38 @@ class Product(models.Model):
     psu_country_of_origin = models.CharField('Країна виробництва блоку живлення', max_length=100, blank=True)
     psu_warranty_months = models.PositiveSmallIntegerField('Гарантія блоку живлення, міс.', blank=True, null=True)
     psu_barcode = models.CharField('Штрихкод блоку живлення', max_length=80, blank=True)
+    cooling_manufacturer = models.CharField('Виробник системи охолодження', max_length=100, blank=True)
+    cooling_cpu_compatibility = models.TextField(
+        'Сумісність із процесорами',
+        blank=True,
+        help_text='Якщо значень кілька, розділяйте їх комами.',
+    )
+    cooling_socket = models.TextField(
+        'Сокет',
+        blank=True,
+        help_text='Якщо значень кілька, розділяйте їх комами.',
+    )
+    cooling_fan_count = models.CharField('Кількість вентиляторів системи охолодження', max_length=30, blank=True)
+    cooling_fan_diameter = models.CharField('Діаметр вентиляторів системи охолодження', max_length=40, blank=True)
+    cooling_lighting = models.CharField('Підсвічування системи охолодження', max_length=30, blank=True)
+    cooling_max_tdp = models.CharField('Максимальний TDP системи охолодження', max_length=30, blank=True)
+    cooling_max_fan_speed = models.CharField('Максимальна частота обертів вентиляторів системи охолодження', max_length=30, blank=True)
+    cooling_radiator_material = models.CharField('Матеріал радіатора системи охолодження', max_length=60, blank=True)
+    cooling_airflow = models.CharField('Повітряний потік системи охолодження', max_length=30, blank=True)
+    cooling_fan_speed_control = models.CharField('Управління швидкістю обертання вентиляторів', max_length=30, blank=True)
+    cooling_pump_power_connector = models.CharField('Роз’єм живлення помпи', max_length=40, blank=True)
+    cooling_fan_power_connector = models.CharField('Роз’єм живлення вентиляторів', max_length=40, blank=True)
+    cooling_pump_voltage = models.CharField('Напруга живлення помпи', max_length=20, blank=True)
+    cooling_tube_length = models.CharField('Довжина патрубків системи охолодження', max_length=30, blank=True)
+    cooling_radiator_dimensions = models.CharField('Розміри радіатора системи охолодження', max_length=60, blank=True)
+    cooling_fan_dimensions = models.CharField('Розміри вентиляторів системи охолодження', max_length=60, blank=True)
+    cooling_pump_dimensions = models.CharField('Розмір водоблоку системи охолодження', max_length=60, blank=True)
+    cooling_noise_level = models.CharField('Рівень шуму системи охолодження', max_length=30, blank=True)
+    cooling_color = models.CharField('Колір системи охолодження', max_length=40, blank=True)
+    cooling_country_of_origin = models.CharField('Країна виробництва системи охолодження', max_length=100, blank=True)
+    cooling_warranty_months = models.PositiveSmallIntegerField('Гарантія системи охолодження, міс.', blank=True, null=True)
+    cooling_barcode = models.CharField('Штрихкод системи охолодження', max_length=80, blank=True)
+    cooling_note = models.TextField('Примітка до системи охолодження', blank=True)
     # Неопубліковані товари залишаються в адмінці, але не показуються покупцям.
     is_active = models.BooleanField('Опублікований', default=True)
     created_at = models.DateTimeField('Додано', auto_now_add=True)
