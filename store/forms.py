@@ -1550,3 +1550,85 @@ class ComputerCaseProductFilterForm(LaptopProductFilterForm):
             'чорний',
         ),
     }
+
+
+class PowerSupplyProductFilterForm(LaptopProductFilterForm):
+    sata_connector_ranges = (
+        ('3 і менше', 0, 3),
+        ('4 - 5', 4, 5),
+        ('6 - 7', 6, 7),
+        ('8 - 9', 8, 9),
+        ('10 і більше', 10, None),
+    )
+    range_filter_fields = {
+        'psu_sata_connectors': sata_connector_ranges,
+    }
+    filter_fields = (
+        ('psu_manufacturer', 'Виробник'),
+        ('psu_type', 'Тип БЖ'),
+        ('psu_standard', 'Стандарт БЖ'),
+        ('psu_wattage', 'Потужність'),
+        ('psu_modular_connection', 'Модульне підключення кабелів'),
+        ('psu_certification', 'Сертифікація 80 PLUS'),
+        ('psu_pfc', 'Модуль PFC'),
+        ('psu_pcie_connectors', 'Кіль-ть роз’ємів додаткового живлення для відеокарт'),
+        ('psu_sata_connectors', 'Кількість роз’ємів SATA'),
+        ('psu_fan_diameter', 'Діаметр вентиляторів'),
+    )
+    preset_options = {
+        'psu_manufacturer': (
+            '1stPlayer', '2E', 'AeroCool', 'APNX', 'ASRock', 'ASUS', 'Azza',
+            'Casecom', 'Chieftec', 'Chieftronic', 'Corsair', 'Cougar', 'Deepcool',
+            'Dell', 'Delux', 'Enermax', 'FSP', 'Gamemax', 'GIGABYTE', 'HighPower',
+            'Inter-Tech', 'Lian Li', 'LogicPower', 'Machenike', 'MONTECH', 'MSI',
+            'NZXT', 'OCYPUS', 'PcCooler', 'Qube', 'Seasonic', 'Super Flower',
+            'T’alonika', 'Ubiquiti', 'Vinga', 'Xilence',
+        ),
+        'psu_type': (
+            'для майнінгу',
+            'модульні',
+            'для серверних корпусів',
+            "для комп'ютерів",
+            'зовнішній',
+        ),
+        'psu_standard': ('ATX (PS/2)', 'SFX', 'TFX'),
+        'psu_wattage': (
+            '12 Вт', '200 Вт', '300 Вт', '350 Вт', '400 Вт', '450 Вт', '500 Вт',
+            '550 Вт', '600 Вт', '650 Вт', '700 Вт', '750 Вт', '800 Вт', '850 Вт',
+            '900 Вт', '1000 Вт', '1050 Вт', '1200 Вт', '1250 Вт', '1300 Вт',
+            '1600 Вт', '1650 Вт', '1700 Вт', '2000 Вт', '2200 Вт',
+        ),
+        'psu_modular_connection': ('Full', 'Semi', 'не має', 'є'),
+        'psu_certification': (
+            '80 PLUS',
+            '80 PLUS Bronze',
+            '80 PLUS Silver',
+            '80 PLUS Gold',
+            '80 PLUS Platinum',
+            '80 PLUS Titanium',
+        ),
+        'psu_pfc': ('активний', 'пасивний'),
+        'psu_pcie_connectors': tuple(str(value) for value in (1, 2, 3, 4, 5, 6, 7, 8, 9, 14)),
+        'psu_sata_connectors': tuple(label for label, _, _ in sata_connector_ranges),
+        'psu_fan_diameter': ('немає', '80 мм', '92 мм', '120 мм', '135 мм', '140 мм'),
+    }
+
+    @staticmethod
+    def parse_speed(value):
+        return SSDProductFilterForm.parse_speed(value)
+
+    def __init__(self, *args, products, **kwargs):
+        super().__init__(*args, products=products, **kwargs)
+        counts = Counter()
+        for value in products.values_list('psu_sata_connectors', flat=True):
+            connector_count = self.parse_speed(value)
+            if connector_count is None:
+                continue
+            for label, minimum, maximum in self.sata_connector_ranges:
+                if connector_count >= minimum and (maximum is None or connector_count <= maximum):
+                    counts[label] += 1
+                    break
+        self.fields['psu_sata_connectors'].choices = [
+            (label, f'{label} ({counts[label]})' if counts[label] else label)
+            for label, _, _ in self.sata_connector_ranges
+        ]

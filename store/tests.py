@@ -1683,3 +1683,158 @@ class ComputerCaseCatalogFilterTests(TestCase):
                 'Інші',
             ],
         )
+
+
+class PowerSupplyCatalogFilterTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Комплектуючі для ПК')
+        self.modular_gold_psu = Product.objects.create(
+            name='Seasonic Focus GX-750',
+            category=self.category,
+            component_type='power_supply',
+            price=Decimal('5200.00'),
+            psu_manufacturer='Seasonic',
+            psu_type="для комп'ютерів",
+            psu_standard='ATX (PS/2)',
+            psu_wattage='750 Вт',
+            psu_modular_connection='Full',
+            psu_certification='80 PLUS Gold',
+            psu_pfc='активний',
+            psu_pcie_connectors='4',
+            psu_sata_connectors='6',
+            psu_fan_diameter='120 мм',
+            psu_motherboard_connector='20+4 pin',
+            psu_cpu_connector='2x4+4 pin',
+            psu_gpu_connector='4x6+2 pin',
+            psu_peripheral_connectors='3',
+            psu_output_current_5v='18A',
+            psu_output_current_3_3v='18A',
+            psu_output_current_12v='58A',
+            psu_output_current_minus_12v='0.3A',
+            psu_output_current_5vsb='3A',
+            psu_cooling_type='вентилятор',
+            psu_protection='OPP, SCP, UVP, OVP',
+            psu_dimensions='140 x 150 x 86 мм',
+            psu_country_of_origin='Китай',
+            psu_warranty_months=12,
+            psu_barcode='4823093320123',
+            country_of_origin='Китай',
+            warranty_months=12,
+            features='Виробник може змінювати властивості.',
+        )
+        self.server_psu = Product.objects.create(
+            name='FSP Server 1200',
+            category=self.category,
+            component_type='power_supply',
+            price=Decimal('8900.00'),
+            psu_manufacturer='FSP',
+            psu_type='для серверних корпусів',
+            psu_standard='ATX (PS/2)',
+            psu_wattage='1200 Вт',
+            psu_modular_connection='не має',
+            psu_certification='80 PLUS Platinum',
+            psu_pfc='активний',
+            psu_pcie_connectors='2',
+            psu_sata_connectors='3',
+            psu_fan_diameter='80 мм',
+        )
+        Product.objects.create(
+            name='Case to exclude from PSU filters',
+            category=self.category,
+            component_type='case',
+            price=Decimal('4000.00'),
+            psu_manufacturer='Seasonic',
+            psu_type="для комп'ютерів",
+        )
+        self.url = reverse('category_products', args=(self.category.pk,))
+
+    def test_power_supply_catalog_shows_dynamic_filter_groups_and_sata_ranges(self):
+        response = self.client.get(self.url, {'component_type': 'power_supply'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['power_supply_catalog'])
+        self.assertEqual(
+            list(response.context['products']),
+            [self.server_psu, self.modular_gold_psu],
+        )
+        self.assertEqual(len(response.context['filter_groups']), 10)
+        self.assertContains(response, 'Seasonic (1)')
+        self.assertContains(response, '80 PLUS Gold (1)')
+        self.assertContains(response, '750 Вт (1)')
+        self.assertContains(response, '3 і менше (1)')
+        self.assertContains(response, '6 - 7 (1)')
+        self.assertContains(response, '120 мм (1)')
+
+    def test_power_supply_filters_combine_exact_values_and_sata_ranges(self):
+        response = self.client.get(self.url, {
+            'component_type': 'power_supply',
+            'psu_manufacturer': 'Seasonic',
+            'psu_type': "для комп'ютерів",
+            'psu_standard': 'ATX (PS/2)',
+            'psu_wattage': '750 Вт',
+            'psu_modular_connection': 'Full',
+            'psu_certification': '80 PLUS Gold',
+            'psu_pfc': 'активний',
+            'psu_pcie_connectors': '4',
+            'psu_sata_connectors': '6 - 7',
+            'psu_fan_diameter': '120 мм',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.modular_gold_psu])
+
+    def test_power_supply_admin_fields_are_unique_and_present(self):
+        admin_fields = [
+            field_name
+            for _, options in ProductAdmin.fieldsets
+            for field_name in options['fields']
+            if field_name.startswith('psu_')
+        ]
+        model_fields = {
+            field.name
+            for field in Product._meta.fields
+            if field.name.startswith('psu_')
+        }
+
+        self.assertEqual(len(admin_fields), len(set(admin_fields)))
+        self.assertEqual(set(admin_fields), model_fields)
+
+    def test_power_supply_product_page_shows_detailed_reference_specifications(self):
+        response = self.client.get(
+            reverse('product_detail', args=(self.modular_gold_psu.pk,)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Тип БЖ'], "для комп'ютерів")
+        self.assertEqual(specifications['Потужність'], '750 Вт')
+        self.assertEqual(specifications['Підключення материнської плати'], '20+4 pin')
+        self.assertEqual(specifications['Підключення процесора'], '2x4+4 pin')
+        self.assertEqual(specifications['Підключення відеокарти'], '4x6+2 pin')
+        self.assertEqual(specifications['Output Current +12V'], '58A')
+        self.assertEqual(specifications['Захист від'], 'OPP, SCP, UVP, OVP')
+        self.assertEqual(specifications['Розмір, мм'], '140 x 150 x 86 мм')
+        self.assertEqual(specifications['Виробник'], 'Seasonic')
+        self.assertEqual(specifications['Країна виробництва'], 'Китай')
+        self.assertEqual(specifications['Гарантія, міс'], 12)
+        self.assertEqual(specifications['Штрихкод'], '4823093320123')
+        self.assertEqual(specifications['Примітка'], 'Виробник може змінювати властивості.')
+        self.assertEqual(
+            [group['name'] for group in response.context['specification_groups']],
+            ['Основні характеристики', 'Інші'],
+        )
+        self.assertContains(response, 'data-open-specifications')
+        self.assertContains(response, 'specifications-dialog')
+
+    def test_power_supply_product_page_falls_back_to_shared_country_and_warranty(self):
+        Product.objects.filter(pk=self.modular_gold_psu.pk).update(
+            psu_country_of_origin='',
+            psu_warranty_months=None,
+        )
+
+        response = self.client.get(
+            reverse('product_detail', args=(self.modular_gold_psu.pk,)),
+        )
+
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Країна виробництва'], 'Китай')
+        self.assertEqual(specifications['Гарантія, міс'], 12)

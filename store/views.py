@@ -20,6 +20,7 @@ from store.forms import (
     LaptopProductFilterForm,
     MemoryProductFilterForm,
     MotherboardProductFilterForm,
+    PowerSupplyProductFilterForm,
     ProcessorProductFilterForm,
     ProductReviewForm,
     ProfileDetailsForm,
@@ -265,6 +266,7 @@ class CategoryProductsView(TemplateView):
             context['ssd_catalog'] = selected_type == 'ssd'
             context['hdd_catalog'] = selected_type == 'hdd'
             context['case_catalog'] = selected_type == 'case'
+            context['power_supply_catalog'] = selected_type == 'power_supply'
         context['filter_groups'] = ()
         context['filter_form'] = None
         context['placeholder_filter_groups'] = ()
@@ -309,6 +311,11 @@ class CategoryProductsView(TemplateView):
             and self.request.GET.get('component_type') == 'case'
         ):
             filter_form_class = ComputerCaseProductFilterForm
+        elif (
+            _is_computer_components_category(category)
+            and self.request.GET.get('component_type') == 'power_supply'
+        ):
+            filter_form_class = PowerSupplyProductFilterForm
 
         if filter_form_class:
             base_products = context['products']
@@ -619,6 +626,68 @@ class ProductDetailView(TemplateView):
         'case_warranty_months': 'Гарантія, міс',
         'case_barcode': 'Штрихкод',
         'case_note': 'Примітка',
+    }
+
+    power_supply_specification_groups = (
+        ('Основні характеристики', (
+            'psu_type',
+            'psu_standard',
+            'psu_wattage',
+            'psu_modular_connection',
+            'psu_certification',
+            'psu_pfc',
+            'psu_motherboard_connector',
+            'psu_cpu_connector',
+            'psu_gpu_connector',
+            'psu_pcie_connectors',
+            'psu_sata_connectors',
+            'psu_peripheral_connectors',
+            'psu_output_current_5v',
+            'psu_output_current_3_3v',
+            'psu_output_current_12v',
+            'psu_output_current_minus_12v',
+            'psu_output_current_5vsb',
+            'psu_cooling_type',
+            'psu_fan_diameter',
+            'psu_protection',
+            'psu_dimensions',
+        )),
+        ('Інші', (
+            'psu_manufacturer',
+            'psu_country_of_origin',
+            'psu_warranty_months',
+            'psu_barcode',
+            'features',
+        )),
+    )
+
+    power_supply_specification_labels = {
+        'psu_type': 'Тип БЖ',
+        'psu_standard': 'Стандарт БЖ',
+        'psu_wattage': 'Потужність',
+        'psu_modular_connection': 'Модульне підключення кабелів',
+        'psu_certification': 'Сертифікація 80 PLUS',
+        'psu_pfc': 'Модуль PFC',
+        'psu_motherboard_connector': 'Підключення материнської плати',
+        'psu_cpu_connector': 'Підключення процесора',
+        'psu_gpu_connector': 'Підключення відеокарти',
+        'psu_pcie_connectors': 'Кіль-ть роз’ємів додаткового живлення для відеокарт',
+        'psu_sata_connectors': 'Кількість роз’ємів SATA',
+        'psu_peripheral_connectors': 'Кількість роз’ємів Peripheral',
+        'psu_output_current_5v': 'Output Current +5V',
+        'psu_output_current_3_3v': 'Output Current +3,3V',
+        'psu_output_current_12v': 'Output Current +12V',
+        'psu_output_current_minus_12v': 'Output Current -12V',
+        'psu_output_current_5vsb': 'Output Current +5Vsb',
+        'psu_cooling_type': 'Тип охолодження',
+        'psu_fan_diameter': 'Діаметр вентиляторів',
+        'psu_protection': 'Захист від',
+        'psu_dimensions': 'Розмір, мм',
+        'psu_manufacturer': 'Виробник',
+        'psu_country_of_origin': 'Країна виробництва',
+        'psu_warranty_months': 'Гарантія, міс',
+        'psu_barcode': 'Штрихкод',
+        'features': 'Примітка',
     }
 
     motherboard_specification_groups = (
@@ -936,6 +1005,11 @@ class ProductDetailView(TemplateView):
             specification_groups = self.case_specification_groups
         elif (
             _is_computer_components_category(product.category)
+            and product.component_type == 'power_supply'
+        ):
+            specification_groups = self.power_supply_specification_groups
+        elif (
+            _is_computer_components_category(product.category)
             and product.component_type == 'motherboard'
         ):
             specification_groups = self.motherboard_specification_groups
@@ -946,6 +1020,14 @@ class ProductDetailView(TemplateView):
 
         def specification_value(field_name):
             value = getattr(product, field_name)
+            if product.component_type == 'power_supply':
+                legacy_fields = {
+                    'psu_manufacturer': 'manufacturer',
+                    'psu_country_of_origin': 'country_of_origin',
+                    'psu_warranty_months': 'warranty_months',
+                }
+                if field_name in legacy_fields and not value:
+                    return getattr(product, legacy_fields[field_name])
             if (
                 field_name == 'ssd_component_capacity'
                 and not value
@@ -974,11 +1056,13 @@ class ProductDetailView(TemplateView):
                             self.hdd_specification_labels
                             if product.component_type == 'hdd'
                             else self.case_specification_labels
+                            if product.component_type == 'case'
+                            else self.power_supply_specification_labels
                         ).get(
                             field_name,
                             product._meta.get_field(field_name).verbose_name,
                         )
-                        if product.component_type in ('hdd', 'case')
+                        if product.component_type in ('hdd', 'case', 'power_supply')
                         else product._meta.get_field(field_name).verbose_name,
                         specification_value(field_name).strftime('%d.%m.%Y')
                         if field_name == 'cpu_release_date' and specification_value(field_name)
