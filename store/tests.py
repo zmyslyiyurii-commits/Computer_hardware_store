@@ -1515,3 +1515,171 @@ class HDDCatalogFilterTests(TestCase):
             specifications['Примітка'],
             'Виробник може змінювати властивості.',
         )
+
+
+class ComputerCaseCatalogFilterTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Комплектуючі для ПК')
+        self.gaming_case = Product.objects.create(
+            name='MONTECH AIR 903 MAX',
+            category=self.category,
+            component_type='case',
+            price=Decimal('3500.00'),
+            case_manufacturer='MONTECH',
+            case_class='Геймерські',
+            case_form_factor='Miditower',
+            case_installation='вертикальний',
+            case_supported_motherboards='ATX, micro-ATX, Mini-ITX',
+            case_psu_included='без блоку живлення',
+            psu_location='нижнє',
+            psu_power='750 Вт',
+            case_3_5_bays='2',
+            case_fan_configuration='3 x 120 мм, 1 x 140 мм',
+            case_external_connectors='USB 2.0, USB 3.0, Audio',
+            case_color='чорний',
+            case_external_bays_5_25='відсутній',
+            case_external_bays_3_5='відсутній',
+            case_internal_bays_5_25='відсутній',
+            case_internal_bays_2_5='2',
+            case_expansion_slots='4',
+            case_additional_fan_positions='Top 3x12 or 2x14 см',
+            case_cooling_elements='вентиляційні решітки',
+            case_dust_filter='так',
+            case_liquid_cooling_support='так',
+            case_max_noise='33 дБ',
+            case_gpu_clearance='420 мм',
+            case_cpu_cooler_clearance='175 мм',
+            case_dimensions='441 x 236 x 460 мм',
+            case_weight='9',
+            case_barcode='4711636006521',
+            case_country_of_origin='Китай',
+            case_warranty_months=36,
+            case_note='Виробник може змінювати властивості.',
+            case_lighting='ARGB-підсвічування',
+            case_material='скло, сталь, пластик',
+            computer_additional_features='з безгвинтовим кріпленням',
+        )
+        self.compact_case = Product.objects.create(
+            name='2E Minitower',
+            category=self.category,
+            component_type='case',
+            price=Decimal('2400.00'),
+            case_manufacturer='2E',
+            case_class='Класичні',
+            case_form_factor='Minitower',
+            case_installation='вертикальний',
+            case_supported_motherboards='micro-ATX, Mini-ITX',
+            case_psu_included='з блоком живлення',
+            psu_location='верхнє',
+            psu_power='500 Вт',
+            case_3_5_bays='1',
+            case_fan_configuration='1 x 120 мм',
+            case_external_connectors='USB 2.0, Audio',
+            case_color='білий',
+        )
+        Product.objects.create(
+            name='SSD excluded from case filters',
+            category=self.category,
+            component_type='ssd',
+            price=Decimal('3000.00'),
+            case_manufacturer='MONTECH',
+            case_class='Геймерські',
+        )
+        self.url = reverse('category_products', args=(self.category.pk,))
+
+    def test_case_catalog_shows_dynamic_filter_groups_and_counts(self):
+        response = self.client.get(self.url, {'component_type': 'case'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['case_catalog'])
+        self.assertEqual(
+            list(response.context['products']),
+            [self.compact_case, self.gaming_case],
+        )
+        self.assertEqual(len(response.context['filter_groups']), 12)
+        self.assertContains(response, 'MONTECH (1)')
+        self.assertContains(response, 'Геймерські (1)')
+        self.assertContains(response, 'Miditower (1)')
+        self.assertContains(response, 'ATX (1)')
+        self.assertContains(response, 'USB 3.0 (1)')
+        self.assertContains(response, 'чорний (1)')
+
+    def test_case_filters_combine_exact_and_multi_value_characteristics(self):
+        response = self.client.get(self.url, {
+            'component_type': 'case',
+            'case_manufacturer': 'MONTECH',
+            'case_class': 'Геймерські',
+            'case_form_factor': 'Miditower',
+            'case_installation': 'вертикальний',
+            'case_supported_motherboards': 'ATX',
+            'case_psu_included': 'без блоку живлення',
+            'psu_location': 'нижнє',
+            'psu_power': '750 Вт',
+            'case_3_5_bays': '2',
+            'case_fan_configuration': '3 x 120 мм',
+            'case_external_connectors': 'USB 3.0',
+            'case_color': 'чорний',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.gaming_case])
+
+    def test_case_price_filter_is_scoped_to_case_catalog(self):
+        response = self.client.get(self.url, {
+            'component_type': 'case',
+            'price_max': '3000',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.compact_case])
+
+    def test_case_filter_fields_are_unique_and_present_in_admin(self):
+        admin_fields = [
+            field_name
+            for _, options in ProductAdmin.fieldsets
+            for field_name in options['fields']
+            if field_name.startswith('case_')
+        ]
+        model_fields = {
+            field.name
+            for field in Product._meta.fields
+            if field.name.startswith('case_')
+        }
+
+        self.assertEqual(len(admin_fields), len(set(admin_fields)))
+        self.assertEqual(set(admin_fields), model_fields)
+
+    def test_case_product_page_shows_full_case_specification_groups(self):
+        response = self.client.get(
+            reverse('product_detail', args=(self.gaming_case.pk,)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Клас корпусу'], 'Геймерські')
+        self.assertEqual(specifications['Типорозмір'], 'Miditower')
+        self.assertEqual(specifications['Розташування блоку живлення'], 'нижнє')
+        self.assertEqual(specifications['Кількість зовнішніх відсіків 5.25"'], 'відсутній')
+        self.assertEqual(specifications['Кількість внутрішніх відсіків 2.5"'], '2')
+        self.assertEqual(specifications['Кількість слотів розширення'], '4')
+        self.assertEqual(specifications['Кількість і розмір встановлених вентиляторів'], '3 x 120 мм, 1 x 140 мм')
+        self.assertEqual(specifications['Пиловий фільтр'], 'так')
+        self.assertEqual(specifications['Зовнішні роз’єми'], 'USB 2.0, USB 3.0, Audio')
+        self.assertEqual(specifications['Встановлення довгих відеокарт'], '420 мм')
+        self.assertEqual(specifications['Розмір, мм'], '441 x 236 x 460 мм')
+        self.assertEqual(specifications['Виробник'], 'MONTECH')
+        self.assertEqual(specifications['Країна виробництва'], 'Китай')
+        self.assertEqual(specifications['Гарантія, міс'], 36)
+        self.assertEqual(specifications['Штрихкод'], '4711636006521')
+        self.assertEqual(specifications['Примітка'], 'Виробник може змінювати властивості.')
+        self.assertEqual(
+            [group['name'] for group in response.context['specification_groups']],
+            [
+                'Основні характеристики',
+                'Зовнішні відсіки',
+                'Внутрішні відсіки',
+                'Слоти розширення',
+                'Охолодження',
+                'Функції та можливості',
+                'Фізичні характеристики',
+                'Інші',
+            ],
+        )

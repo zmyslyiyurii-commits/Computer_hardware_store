@@ -357,6 +357,46 @@ class Product(models.Model):
     hdd_warranty_months = models.PositiveSmallIntegerField('Гарантія HDD, міс.', blank=True, null=True)
     hdd_barcode = models.CharField('Штрихкод HDD', max_length=80, blank=True)
     hdd_note = models.TextField('Примітка до HDD', blank=True)
+    case_manufacturer = models.CharField('Виробник корпусу', max_length=100, blank=True)
+    case_class = models.CharField('Клас корпусу', max_length=40, blank=True)
+    case_form_factor = models.CharField('Типорозмір корпусу', max_length=40, blank=True)
+    case_installation = models.CharField('Спосіб встановлення корпусу', max_length=40, blank=True)
+    case_supported_motherboards = models.TextField(
+        'Підтримувані материнські плати',
+        blank=True,
+        help_text='Якщо значень кілька, розділяйте їх комами.',
+    )
+    case_psu_included = models.CharField('Наявність блоку живлення', max_length=40, blank=True)
+    case_3_5_bays = models.CharField('Кількість внутрішніх відсіків 3.5"', max_length=20, blank=True)
+    case_fan_configuration = models.TextField(
+        'Кількість і розмір вентиляторів',
+        blank=True,
+        help_text='Якщо значень кілька, розділяйте їх комами.',
+    )
+    case_external_connectors = models.TextField(
+        'Зовнішні роз’єми корпусу',
+        blank=True,
+        help_text='Якщо значень кілька, розділяйте їх комами.',
+    )
+    case_color = models.CharField('Колір корпусу', max_length=40, blank=True)
+    case_external_bays_5_25 = models.CharField('Кількість зовнішніх відсіків 5.25"', max_length=30, blank=True)
+    case_external_bays_3_5 = models.CharField('Кількість зовнішніх відсіків 3.5"', max_length=30, blank=True)
+    case_internal_bays_5_25 = models.CharField('Кількість внутрішніх відсіків 5.25"', max_length=30, blank=True)
+    case_internal_bays_2_5 = models.CharField('Кількість внутрішніх відсіків 2.5"', max_length=30, blank=True)
+    case_expansion_slots = models.CharField('Кількість слотів розширення', max_length=30, blank=True)
+    case_additional_fan_positions = models.TextField('Місця для додаткових вентиляторів', blank=True)
+    case_cooling_elements = models.TextField('Охолоджуючі елементи корпусу', blank=True)
+    case_dust_filter = models.CharField('Пиловий фільтр корпусу', max_length=30, blank=True)
+    case_liquid_cooling_support = models.CharField('Підтримка рідинного охолодження', max_length=30, blank=True)
+    case_max_noise = models.CharField('Максимальний рівень шуму корпусу', max_length=30, blank=True)
+    case_gpu_clearance = models.CharField('Встановлення довгих відеокарт', max_length=30, blank=True)
+    case_cpu_cooler_clearance = models.CharField('Максимальна висота процесорного кулера', max_length=30, blank=True)
+    case_dimensions = models.CharField('Розмір корпусу, мм', max_length=60, blank=True)
+    case_weight = models.CharField('Вага корпусу, кг', max_length=30, blank=True)
+    case_country_of_origin = models.CharField('Країна виробництва корпусу', max_length=100, blank=True)
+    case_warranty_months = models.PositiveSmallIntegerField('Гарантія корпусу, міс.', blank=True, null=True)
+    case_barcode = models.CharField('Штрихкод корпусу', max_length=80, blank=True)
+    case_note = models.TextField('Примітка до корпусу', blank=True)
     # Неопубліковані товари залишаються в адмінці, але не показуються покупцям.
     is_active = models.BooleanField('Опублікований', default=True)
     created_at = models.DateTimeField('Додано', auto_now_add=True)

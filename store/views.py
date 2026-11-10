@@ -14,6 +14,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, TemplateView
 from store.forms import (
     CheckoutForm,
+    ComputerCaseProductFilterForm,
     ComputerProductFilterForm,
     HDDProductFilterForm,
     LaptopProductFilterForm,
@@ -263,6 +264,7 @@ class CategoryProductsView(TemplateView):
             context['memory_catalog'] = selected_type == 'memory'
             context['ssd_catalog'] = selected_type == 'ssd'
             context['hdd_catalog'] = selected_type == 'hdd'
+            context['case_catalog'] = selected_type == 'case'
         context['filter_groups'] = ()
         context['filter_form'] = None
         context['placeholder_filter_groups'] = ()
@@ -302,6 +304,11 @@ class CategoryProductsView(TemplateView):
             and self.request.GET.get('component_type') == 'hdd'
         ):
             filter_form_class = HDDProductFilterForm
+        elif (
+            _is_computer_components_category(category)
+            and self.request.GET.get('component_type') == 'case'
+        ):
+            filter_form_class = ComputerCaseProductFilterForm
 
         if filter_form_class:
             base_products = context['products']
@@ -526,6 +533,92 @@ class ProductDetailView(TemplateView):
         'hdd_warranty_months': 'Гарантія, міс',
         'hdd_barcode': 'Штрихкод',
         'hdd_note': 'Примітка',
+    }
+
+    case_specification_groups = (
+        ('Основні характеристики', (
+            'case_class',
+            'case_form_factor',
+            'case_installation',
+            'case_supported_motherboards',
+            'case_psu_included',
+            'psu_location',
+        )),
+        ('Зовнішні відсіки', (
+            'case_external_bays_5_25',
+            'case_external_bays_3_5',
+        )),
+        ('Внутрішні відсіки', (
+            'case_internal_bays_5_25',
+            'case_3_5_bays',
+            'case_internal_bays_2_5',
+        )),
+        ('Слоти розширення', (
+            'case_expansion_slots',
+        )),
+        ('Охолодження', (
+            'case_fan_configuration',
+            'case_additional_fan_positions',
+            'case_cooling_elements',
+            'case_dust_filter',
+            'case_liquid_cooling_support',
+            'case_max_noise',
+        )),
+        ('Функції та можливості', (
+            'case_external_connectors',
+            'computer_additional_features',
+            'case_gpu_clearance',
+            'case_cpu_cooler_clearance',
+            'case_lighting',
+            'case_material',
+        )),
+        ('Фізичні характеристики', (
+            'case_dimensions',
+            'case_weight',
+            'case_color',
+        )),
+        ('Інші', (
+            'case_manufacturer',
+            'case_country_of_origin',
+            'case_warranty_months',
+            'case_barcode',
+            'case_note',
+        )),
+    )
+
+    case_specification_labels = {
+        'case_class': 'Клас корпусу',
+        'case_form_factor': 'Типорозмір',
+        'case_installation': 'Спосіб установки',
+        'case_supported_motherboards': 'Підтримувані материнські плати',
+        'case_psu_included': 'Наявність блоку живлення',
+        'psu_location': 'Розташування блоку живлення',
+        'case_external_bays_5_25': 'Кількість зовнішніх відсіків 5.25"',
+        'case_external_bays_3_5': 'Кількість зовнішніх відсіків 3.5"',
+        'case_internal_bays_5_25': 'Кількість внутрішніх відсіків 5.25"',
+        'case_3_5_bays': 'Кількість внутрішніх відсіків 3.5"',
+        'case_internal_bays_2_5': 'Кількість внутрішніх відсіків 2.5"',
+        'case_expansion_slots': 'Кількість слотів розширення',
+        'case_fan_configuration': 'Кількість і розмір встановлених вентиляторів',
+        'case_additional_fan_positions': 'Місця для додаткових вентиляторів',
+        'case_cooling_elements': 'Охолоджуючі елементи',
+        'case_dust_filter': 'Пиловий фільтр',
+        'case_liquid_cooling_support': 'Підтримка рідинного охолодження',
+        'case_max_noise': 'Максимальний рівень шуму',
+        'case_external_connectors': 'Зовнішні роз’єми',
+        'computer_additional_features': 'Особливості',
+        'case_gpu_clearance': 'Встановлення довгих відеокарт',
+        'case_cpu_cooler_clearance': 'Максимальна висота процесорного кулера',
+        'case_lighting': 'Наявність підсвічування',
+        'case_material': 'Матеріал корпусу',
+        'case_dimensions': 'Розмір, мм',
+        'case_weight': 'Вага, кг',
+        'case_color': 'Колір',
+        'case_manufacturer': 'Виробник',
+        'case_country_of_origin': 'Країна виробництва',
+        'case_warranty_months': 'Гарантія, міс',
+        'case_barcode': 'Штрихкод',
+        'case_note': 'Примітка',
     }
 
     motherboard_specification_groups = (
@@ -838,6 +931,11 @@ class ProductDetailView(TemplateView):
             specification_groups = self.hdd_specification_groups
         elif (
             _is_computer_components_category(product.category)
+            and product.component_type == 'case'
+        ):
+            specification_groups = self.case_specification_groups
+        elif (
+            _is_computer_components_category(product.category)
             and product.component_type == 'motherboard'
         ):
             specification_groups = self.motherboard_specification_groups
@@ -872,11 +970,15 @@ class ProductDetailView(TemplateView):
                 'name': group_name,
                 'items': [
                     (
-                        self.hdd_specification_labels.get(
+                        (
+                            self.hdd_specification_labels
+                            if product.component_type == 'hdd'
+                            else self.case_specification_labels
+                        ).get(
                             field_name,
                             product._meta.get_field(field_name).verbose_name,
                         )
-                        if product.component_type == 'hdd'
+                        if product.component_type in ('hdd', 'case')
                         else product._meta.get_field(field_name).verbose_name,
                         specification_value(field_name).strftime('%d.%m.%Y')
                         if field_name == 'cpu_release_date' and specification_value(field_name)
