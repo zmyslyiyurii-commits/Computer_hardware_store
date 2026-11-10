@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from store.admin import ProductAdmin, ProductAdminForm
+from store.forms import SSDProductFilterForm
 from store.models import Category, Order, OrderItem, Product, ProductImage
 
 
@@ -171,13 +172,14 @@ class ComputerComponentsCatalogTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.context['component_cards']), 8)
+        self.assertEqual(len(response.context['component_cards']), 9)
         for title in (
             'Процесори',
             'Материнські плати',
             'Відеокарти',
             "Оперативна пам’ять",
-            'Накопичувачі SSD / HDD',
+            'SSD накопичувачі',
+            'Жорсткі диски HDD',
             'Корпуси',
             'Блоки живлення',
             'Системи охолодження',
@@ -187,6 +189,50 @@ class ComputerComponentsCatalogTests(TestCase):
         self.assertNotIn('Монітори', component_titles)
         self.assertNotIn('Маніпулятори', component_titles)
         self.assertNotIn('Обслуговування ПК', component_titles)
+
+    def test_ssd_and_hdd_cards_link_to_separate_product_types(self):
+        response = self.client.get(
+            reverse('computer_components', args=(self.category.pk,)),
+        )
+
+        self.assertContains(response, '?component_type=ssd')
+        self.assertContains(response, '?component_type=hdd')
+        cards_by_type = {
+            card['type']: card
+            for card in response.context['component_cards']
+        }
+        self.assertEqual(
+            cards_by_type['hdd']['image_url'],
+            'https://brain.com.ua/static/images/prod_img/3/0/U0811330_1738963508.webp',
+        )
+
+    def test_ssd_and_hdd_catalogs_only_show_the_selected_drive_type(self):
+        ssd = Product.objects.create(
+            name='NVMe SSD 1TB',
+            category=self.category,
+            component_type='ssd',
+            price=Decimal('3000.00'),
+        )
+        hdd = Product.objects.create(
+            name='HDD 2TB',
+            category=self.category,
+            component_type='hdd',
+            price=Decimal('2500.00'),
+        )
+
+        ssd_response = self.client.get(
+            reverse('category_products', args=(self.category.pk,)),
+            {'component_type': 'ssd'},
+        )
+        hdd_response = self.client.get(
+            reverse('category_products', args=(self.category.pk,)),
+            {'component_type': 'hdd'},
+        )
+
+        self.assertEqual(list(ssd_response.context['products']), [ssd])
+        self.assertEqual(ssd_response.context['category_title'], 'SSD накопичувачі')
+        self.assertEqual(list(hdd_response.context['products']), [hdd])
+        self.assertEqual(hdd_response.context['category_title'], 'Жорсткі диски HDD')
 
     def test_component_picker_links_to_products_of_selected_type(self):
         processor = Product.objects.create(
@@ -1168,3 +1214,151 @@ class MemoryCatalogFilterTests(TestCase):
             [group['name'] for group in response.context['specification_groups']],
             ['Основні характеристики', 'Додатково', 'Інші'],
         )
+
+
+class SSDCatalogFilterTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Комплектуючі для ПК')
+        self.nvme_ssd = Product.objects.create(
+            name='Kingston NV2 1TB',
+            category=self.category,
+            component_type='ssd',
+            price=Decimal('2800.00'),
+            model_series='NV2',
+            ssd_manufacturer='Kingston',
+            ssd_drive_type='внутрішній',
+            ssd_component_capacity='1 TB',
+            ssd_flash_type='3D NAND',
+            ssd_form_factor='M.2',
+            ssd_m2_size='M.2 2280',
+            ssd_interface='PCI Express 4.0 x4',
+            ssd_read_speed='3500 MB/s',
+            ssd_write_speed='2100 MB/s',
+            ssd_thickness='2.2 мм',
+            ssd_endurance='1.5 млн годин',
+            ssd_tbw='600',
+            ssd_power_consumption='7.6 Вт',
+            ssd_dimensions='80 x 22 x 2.2 мм',
+            ssd_weight='9 г',
+            ssd_color='чорний',
+            ssd_country_of_origin='Тайвань',
+            ssd_warranty_months=60,
+            ssd_barcode='8806095811628',
+            ssd_note='Характеристики можуть змінюватися виробником.',
+        )
+        self.external_ssd = Product.objects.create(
+            name='Portable SSD 512GB',
+            category=self.category,
+            component_type='ssd',
+            price=Decimal('2200.00'),
+            ssd_manufacturer='Samsung',
+            ssd_drive_type='зовнішній',
+            ssd_component_capacity='512 GB',
+            ssd_flash_type='TLC',
+            ssd_form_factor='portable',
+            ssd_interface='USB Type-C',
+            ssd_read_speed='500 MB/s',
+            ssd_write_speed='450 MB/s',
+            ssd_thickness='7 мм',
+        )
+        Product.objects.create(
+            name='HDD 2TB',
+            category=self.category,
+            component_type='hdd',
+            price=Decimal('2500.00'),
+            ssd_manufacturer='Kingston',
+            ssd_read_speed='3500 MB/s',
+        )
+        self.url = reverse('category_products', args=(self.category.pk,))
+
+    def test_ssd_catalog_shows_filter_options_and_counts(self):
+        response = self.client.get(self.url, {'component_type': 'ssd'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['ssd_catalog'])
+        self.assertEqual(list(response.context['products']), [self.nvme_ssd, self.external_ssd])
+        self.assertEqual(len(response.context['filter_groups']), 10)
+        self.assertContains(response, 'Kingston (1)')
+        self.assertContains(response, '1 TB (1)')
+        self.assertContains(response, '3001-4000Mb/s (1)')
+        self.assertContains(response, '401-500Mb/s (1)')
+
+    def test_ssd_filters_can_be_combined_and_speed_uses_ranges(self):
+        response = self.client.get(self.url, {
+            'component_type': 'ssd',
+            'ssd_manufacturer': 'Kingston',
+            'ssd_form_factor': 'M.2',
+            'ssd_interface': 'PCI Express 4.0 x4',
+            'ssd_read_speed': '3001-4000Mb/s',
+            'ssd_write_speed': '2001-3000Mb/s',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.nvme_ssd])
+
+    def test_ssd_speed_parser_normalizes_gigabytes_per_second(self):
+        self.assertEqual(SSDProductFilterForm.parse_speed('7 GB/s'), Decimal('7000'))
+
+    def test_ssd_price_filter_does_not_include_hdd_products(self):
+        response = self.client.get(self.url, {
+            'component_type': 'ssd',
+            'price_min': '2000',
+            'price_max': '3000',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.nvme_ssd, self.external_ssd])
+
+    def test_ssd_admin_filter_fields_are_grouped_without_duplicates(self):
+        admin_fields = [
+            field_name
+            for _, options in ProductAdmin.fieldsets
+            for field_name in options['fields']
+            if field_name.startswith('ssd_')
+        ]
+        model_fields = {
+            field.name
+            for field in Product._meta.fields
+            if field.name.startswith('ssd_')
+        }
+
+        self.assertEqual(len(admin_fields), len(set(admin_fields)))
+        self.assertEqual(set(admin_fields), model_fields)
+
+    def test_ssd_product_page_shows_ssd_specifications_and_only_related_ssds(self):
+        response = self.client.get(
+            reverse('product_detail', args=(self.nvme_ssd.pk,)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Тип накопичувача'], 'внутрішній')
+        self.assertEqual(specifications['Серія (модельний ряд)'], 'NV2')
+        self.assertEqual(specifications['Об’єм SSD накопичувача'], '1 TB')
+        self.assertEqual(specifications['Швидкість читання SSD'], '3500 MB/s')
+        self.assertEqual(specifications['Напрацювання на відмову SSD'], '1.5 млн годин')
+        self.assertEqual(specifications['TBW SSD'], '600')
+        self.assertEqual(specifications['Габарити SSD'], '80 x 22 x 2.2 мм')
+        self.assertEqual(specifications['Країна виробництва SSD'], 'Тайвань')
+        self.assertEqual(specifications['Гарантія SSD, міс.'], 60)
+        self.assertEqual(specifications['Штрихкод SSD'], '8806095811628')
+        self.assertEqual(
+            [group['name'] for group in response.context['specification_groups']],
+            ['Основні характеристики', 'Додатково', 'Фізичні характеристики', 'Інші'],
+        )
+        self.assertEqual(list(response.context['related_products']), [self.external_ssd])
+
+    def test_ssd_product_page_falls_back_to_legacy_capacity_field(self):
+        legacy_capacity_ssd = Product.objects.create(
+            name='Legacy capacity SSD',
+            category=self.category,
+            component_type='ssd',
+            price=Decimal('1900.00'),
+            ssd_capacity='256 GB',
+        )
+
+        response = self.client.get(
+            reverse('product_detail', args=(legacy_capacity_ssd.pk,)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Об’єм SSD накопичувача'], '256 GB')

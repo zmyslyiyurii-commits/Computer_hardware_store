@@ -24,7 +24,8 @@ class Product(models.Model):
         ('motherboard', 'Материнські плати'),
         ('graphics_card', 'Відеокарти'),
         ('memory', "Оперативна пам’ять"),
-        ('storage', 'Накопичувачі SSD / HDD'),
+        ('ssd', 'SSD накопичувачі'),
+        ('hdd', 'Жорсткі диски HDD'),
         ('case', 'Корпуси'),
         ('power_supply', 'Блоки живлення'),
         ('cooling', 'Системи охолодження'),
@@ -324,6 +325,26 @@ class Product(models.Model):
     memory_warranty_months = models.PositiveSmallIntegerField('Гарантія, міс.', blank=True, null=True)
     memory_barcode = models.CharField('Штрихкод', max_length=80, blank=True)
     memory_note = models.TextField('Примітка', blank=True)
+    ssd_manufacturer = models.CharField('Виробник SSD', max_length=100, blank=True)
+    ssd_drive_type = models.CharField('Тип накопичувача', max_length=30, blank=True)
+    ssd_component_capacity = models.CharField('Об’єм SSD накопичувача', max_length=30, blank=True)
+    ssd_flash_type = models.CharField('Тип флеш-пам’яті', max_length=40, blank=True)
+    ssd_form_factor = models.CharField('Форм-фактор SSD', max_length=30, blank=True)
+    ssd_m2_size = models.CharField('Типорозмір M.2', max_length=30, blank=True)
+    ssd_interface = models.CharField('Інтерфейс підключення SSD', max_length=50, blank=True)
+    ssd_read_speed = models.CharField('Швидкість читання SSD', max_length=40, blank=True)
+    ssd_write_speed = models.CharField('Швидкість запису SSD', max_length=40, blank=True)
+    ssd_thickness = models.CharField('Товщина SSD', max_length=30, blank=True)
+    ssd_endurance = models.CharField('Напрацювання на відмову SSD', max_length=40, blank=True)
+    ssd_tbw = models.CharField('TBW SSD', max_length=30, blank=True)
+    ssd_power_consumption = models.CharField('Енергоспоживання SSD', max_length=30, blank=True)
+    ssd_dimensions = models.CharField('Габарити SSD', max_length=100, blank=True)
+    ssd_weight = models.CharField('Вага SSD', max_length=30, blank=True)
+    ssd_color = models.CharField('Колір SSD', max_length=30, blank=True)
+    ssd_country_of_origin = models.CharField('Країна виробництва SSD', max_length=100, blank=True)
+    ssd_warranty_months = models.PositiveSmallIntegerField('Гарантія SSD, міс.', blank=True, null=True)
+    ssd_barcode = models.CharField('Штрихкод SSD', max_length=80, blank=True)
+    ssd_note = models.TextField('Примітка до SSD', blank=True)
     # Неопубліковані товари залишаються в адмінці, але не показуються покупцям.
     is_active = models.BooleanField('Опублікований', default=True)
     created_at = models.DateTimeField('Додано', auto_now_add=True)

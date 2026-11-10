@@ -323,6 +323,31 @@ class ProductAdmin(admin.ModelAdmin):
             ),
             'classes': ('collapse',),
         }),
+        ('Характеристики SSD накопичувача', {
+            'fields': (
+                'ssd_manufacturer',
+                'ssd_drive_type',
+                'ssd_component_capacity',
+                'ssd_flash_type',
+                'ssd_form_factor',
+                'ssd_m2_size',
+                'ssd_interface',
+                'ssd_read_speed',
+                'ssd_write_speed',
+                'ssd_thickness',
+                'ssd_endurance',
+                'ssd_tbw',
+                'ssd_power_consumption',
+                'ssd_dimensions',
+                'ssd_weight',
+                'ssd_color',
+                'ssd_country_of_origin',
+                'ssd_warranty_months',
+                'ssd_barcode',
+                'ssd_note',
+            ),
+            'classes': ('collapse',),
+        }),
     )
 
 

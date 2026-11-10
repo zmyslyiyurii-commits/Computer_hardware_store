@@ -1174,3 +1174,181 @@ class MemoryProductFilterForm(LaptopProductFilterForm):
         'memory_lighting': ('немає', 'є'),
         'memory_overclock_profiles': ('EXPO', 'XMP'),
     }
+
+
+class SSDProductFilterForm(LaptopProductFilterForm):
+    read_speed_ranges = (
+        ('401-500Mb/s', 401, 500),
+        ('501-535Mb/s', 501, 535),
+        ('536-560Mb/s', 536, 560),
+        ('561-1000Mb/s', 561, 1000),
+        ('1001-2000Mb/s', 1001, 2000),
+        ('2001-3000Mb/s', 2001, 3000),
+        ('3001-4000Mb/s', 3001, 4000),
+        ('4001-6000Mb/s', 4001, 6000),
+        ('6001-8000Mb/s', 6001, 8000),
+        ('Більше 8000Mb/s', 8001, None),
+    )
+    write_speed_ranges = (
+        ('301-400Mb/s', 301, 400),
+        ('401-450Mb/s', 401, 450),
+        ('451-500Mb/s', 451, 500),
+        ('501-550Mb/s', 501, 550),
+        ('551-1000Mb/s', 551, 1000),
+        ('1001-2000Mb/s', 1001, 2000),
+        ('2001-3000Mb/s', 2001, 3000),
+        ('3001-4000Mb/s', 3001, 4000),
+        ('4001-6000Mb/s', 4001, 6000),
+        ('6001-8000Mb/s', 6001, 8000),
+        ('Більше 8000Mb/s', 8001, None),
+    )
+    range_filter_fields = {
+        'ssd_read_speed': read_speed_ranges,
+        'ssd_write_speed': write_speed_ranges,
+    }
+    filter_fields = (
+        ('ssd_manufacturer', 'Виробник'),
+        ('ssd_drive_type', 'Тип накопичувача'),
+        ('ssd_component_capacity', 'Об’єм пам’яті'),
+        ('ssd_flash_type', 'Тип флеш-пам’яті'),
+        ('ssd_form_factor', 'Форм-фактор'),
+        ('ssd_m2_size', 'Типорозмір M2'),
+        ('ssd_interface', 'Інтерфейс підключення'),
+        ('ssd_read_speed', 'Швидкість читання'),
+        ('ssd_write_speed', 'Швидкість запису'),
+        ('ssd_thickness', 'Товщина'),
+    )
+    preset_options = {
+        'ssd_manufacturer': (
+            'Acer',
+            'Acer Predator',
+            'ADATA',
+            'Apacer',
+            'ASUS',
+            'ATRIA',
+            'GIGABYTE',
+            'Golden Memory',
+            'Goodram',
+            'Hynix',
+            'Kingston',
+            'Kioxia',
+            'LaCie',
+            'Lexar',
+            'Micron',
+            'OCPC',
+            'Patriot',
+            'Phison',
+            'Prologix',
+            'Samsung',
+            'SanDisk',
+            'SOLIDIGM',
+            'Team',
+            'Toshiba',
+            'Transcend',
+            'WD',
+            'Wibrand',
+        ),
+        'ssd_drive_type': ('внутрішній', 'зовнішній'),
+        'ssd_component_capacity': (
+            '16 GB',
+            '120 GB',
+            '128 GB',
+            '240 GB',
+            '250 GB',
+            '256 GB',
+            '480 GB',
+            '500 GB',
+            '512 GB',
+            '960 GB',
+            '1 TB',
+            '1.92 TB',
+            '2 TB',
+            '3.84 TB',
+            '4 TB',
+            '7.68 TB',
+            '8 TB',
+        ),
+        'ssd_flash_type': ('MLC', 'TLC', '3D NAND TLC', '3D NAND QLC', '3D NAND', 'V-NAND', '3D V-NAND'),
+        'ssd_form_factor': ('2.5"', 'M.2', 'portable', 'U.2', 'mSATA'),
+        'ssd_m2_size': ('M.2 2230', 'M.2 2242', 'M.2 2280'),
+        'ssd_interface': (
+            'USB Type-A',
+            'SATA III (6Gb/s)',
+            'USB 3.2',
+            'USB Type-C',
+            'USB 3.1 Type-C',
+            'USB 3.2 Type-C',
+            'PCI Express 3.0 x2',
+            'PCI Express 3.0 x4',
+            'PCI Express 4.0 x4',
+            'PCI Express 5.0 x4',
+            'PCI Express NVMe',
+            'PCI Express 5.0 x2',
+        ),
+        'ssd_read_speed': tuple(label for label, _, _ in read_speed_ranges),
+        'ssd_write_speed': tuple(label for label, _, _ in write_speed_ranges),
+        'ssd_thickness': (
+            '2.1 мм',
+            '2.15 мм',
+            '2.2 мм',
+            '2.23 мм',
+            '2.25 мм',
+            '2.3 мм',
+            '2.38 мм',
+            '2.45 мм',
+            '2.5 мм',
+            '3.13 мм',
+            '3.35 мм',
+            '3.8 мм',
+            '7 мм',
+            '7.5 мм',
+            '8.3 мм',
+            '8.6 мм',
+            '8.88 мм',
+            '9 мм',
+            '9.5 мм',
+            '9.91 мм',
+            '11.2 мм',
+            '12.24 мм',
+            '13 мм',
+            '13.5 мм',
+            '14.9 мм',
+            '15 мм',
+            '17 мм',
+            '40.2 мм',
+        ),
+    }
+
+    @staticmethod
+    def parse_speed(value):
+        value = value or ''
+        match = re.search(r'\d+(?:[.,]\d+)?', value)
+        if not match:
+            return None
+        try:
+            speed = Decimal(match.group().replace(',', '.'))
+        except InvalidOperation:
+            return None
+        unit = re.search(r'\b([tg]b|mb)\s*/?\s*s\b', value, re.IGNORECASE)
+        if unit and unit.group(1).casefold() == 'gb':
+            speed *= 1000
+        elif unit and unit.group(1).casefold() == 'tb':
+            speed *= 1_000_000
+        return speed
+
+    def __init__(self, *args, products, **kwargs):
+        super().__init__(*args, products=products, **kwargs)
+        for field_name, ranges in self.range_filter_fields.items():
+            counts = Counter()
+            for value in products.values_list(field_name, flat=True):
+                speed = self.parse_speed(value)
+                if speed is None:
+                    continue
+                for label, minimum, maximum in ranges:
+                    if speed >= minimum and (maximum is None or speed <= maximum):
+                        counts[label] += 1
+                        break
+            self.fields[field_name].choices = [
+                (label, f'{label} ({counts[label]})' if counts[label] else label)
+                for label, _, _ in ranges
+            ]

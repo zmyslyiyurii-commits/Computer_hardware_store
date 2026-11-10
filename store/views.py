@@ -22,6 +22,7 @@ from store.forms import (
     ProductReviewForm,
     ProfileDetailsForm,
     RegistrationForm,
+    SSDProductFilterForm,
     VideoCardProductFilterForm,
 )
 from store.models import Category, CustomerProfile, Order, OrderItem, Product, Review
@@ -156,10 +157,16 @@ class ComputerComponentsView(TemplateView):
             'https://brain.com.ua/static/images/prod_img/0/5/U0559405_1739809983.webp',
         ),
         (
-            'storage',
-            'Накопичувачі SSD / HDD',
-            'Для системи, програм і файлів',
+            'ssd',
+            'SSD накопичувачі',
+            'Швидке зберігання системи, програм і файлів',
             'https://brain.com.ua/static/images/prod_img/0/6/U0953606_1738404203.webp',
+        ),
+        (
+            'hdd',
+            'Жорсткі диски HDD',
+            'Містке зберігання файлів і резервних копій',
+            'https://brain.com.ua/static/images/prod_img/3/0/U0811330_1738963508.webp',
         ),
         (
             'case',
@@ -253,6 +260,7 @@ class CategoryProductsView(TemplateView):
             context['motherboard_catalog'] = selected_type == 'motherboard'
             context['video_card_catalog'] = selected_type == 'graphics_card'
             context['memory_catalog'] = selected_type == 'memory'
+            context['ssd_catalog'] = selected_type == 'ssd'
         context['filter_groups'] = ()
         context['filter_form'] = None
         context['placeholder_filter_groups'] = ()
@@ -282,6 +290,11 @@ class CategoryProductsView(TemplateView):
             and self.request.GET.get('component_type') == 'memory'
         ):
             filter_form_class = MemoryProductFilterForm
+        elif (
+            _is_computer_components_category(category)
+            and self.request.GET.get('component_type') == 'ssd'
+        ):
+            filter_form_class = SSDProductFilterForm
 
         if filter_form_class:
             base_products = context['products']
@@ -324,6 +337,26 @@ class CategoryProductsView(TemplateView):
                                 if frequency is not None and any(
                                     (minimum is None or frequency > minimum)
                                     and (maximum is None or frequency <= maximum)
+                                    for minimum, maximum in selected_ranges.values()
+                                ):
+                                    matching_ids.append(product_id)
+                            context['products'] = context['products'].filter(pk__in=matching_ids)
+                        elif field_name in getattr(filter_form, 'range_filter_fields', {}):
+                            selected_ranges = {
+                                label: (minimum, maximum)
+                                for label, minimum, maximum
+                                in filter_form.range_filter_fields[field_name]
+                                if label in selected_values
+                            }
+                            matching_ids = []
+                            for product_id, stored_value in context['products'].values_list(
+                                'pk',
+                                field_name,
+                            ):
+                                speed = filter_form.parse_speed(stored_value)
+                                if speed is not None and any(
+                                    speed >= minimum
+                                    and (maximum is None or speed <= maximum)
                                     for minimum, maximum in selected_ranges.values()
                                 ):
                                     matching_ids.append(product_id)
@@ -419,6 +452,38 @@ class ProductDetailView(TemplateView):
             'memory_warranty_months',
             'memory_barcode',
             'memory_note',
+        )),
+    )
+
+    ssd_specification_groups = (
+        ('Основні характеристики', (
+            'ssd_drive_type',
+            'model_series',
+            'ssd_component_capacity',
+            'ssd_flash_type',
+            'ssd_form_factor',
+            'ssd_m2_size',
+            'ssd_interface',
+            'ssd_read_speed',
+            'ssd_write_speed',
+        )),
+        ('Додатково', (
+            'ssd_endurance',
+            'ssd_tbw',
+            'ssd_power_consumption',
+        )),
+        ('Фізичні характеристики', (
+            'ssd_dimensions',
+            'ssd_thickness',
+            'ssd_weight',
+            'ssd_color',
+        )),
+        ('Інші', (
+            'ssd_manufacturer',
+            'ssd_country_of_origin',
+            'ssd_warranty_months',
+            'ssd_barcode',
+            'ssd_note',
         )),
     )
 
@@ -722,6 +787,11 @@ class ProductDetailView(TemplateView):
             specification_groups = self.memory_specification_groups
         elif (
             _is_computer_components_category(product.category)
+            and product.component_type == 'ssd'
+        ):
+            specification_groups = self.ssd_specification_groups
+        elif (
+            _is_computer_components_category(product.category)
             and product.component_type == 'motherboard'
         ):
             specification_groups = self.motherboard_specification_groups
@@ -729,23 +799,34 @@ class ProductDetailView(TemplateView):
             specification_groups = self.computer_specification_groups
         else:
             specification_groups = self.specification_groups
+
+        def specification_value(field_name):
+            value = getattr(product, field_name)
+            if (
+                field_name == 'ssd_component_capacity'
+                and not value
+                and product.component_type == 'ssd'
+            ):
+                return product.ssd_capacity
+            return value
+
         context['specification_groups'] = [
             {
                 'name': group_name,
                 'items': [
                     (
                         product._meta.get_field(field_name).verbose_name,
-                        getattr(product, field_name).strftime('%d.%m.%Y')
-                        if field_name == 'cpu_release_date' and getattr(product, field_name)
-                        else getattr(product, field_name),
+                        specification_value(field_name).strftime('%d.%m.%Y')
+                        if field_name == 'cpu_release_date' and specification_value(field_name)
+                        else specification_value(field_name),
                     )
                     for field_name in field_names
-                    if getattr(product, field_name) not in (None, '')
+                    if specification_value(field_name) not in (None, '')
                 ],
             }
             for group_name, field_names in specification_groups
             if any(
-                getattr(product, field_name) not in (None, '')
+                specification_value(field_name) not in (None, '')
                 for field_name in field_names
             )
         ]
@@ -754,10 +835,13 @@ class ProductDetailView(TemplateView):
             for group in context['specification_groups']
             for item in group['items']
         ]
-        context['related_products'] = Product.objects.filter(
+        related_products = Product.objects.filter(
             category=product.category,
             is_active=True,
-        ).exclude(pk=product.pk)[:4]
+        )
+        if _is_computer_components_category(product.category) and product.component_type:
+            related_products = related_products.filter(component_type=product.component_type)
+        context['related_products'] = related_products.exclude(pk=product.pk)[:4]
         context['favorite_ids'] = _favorite_ids(self.request)
         approved_reviews = product.reviews.filter(is_approved=True)
         rating = approved_reviews.aggregate(average=Avg('rating'))
