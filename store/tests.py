@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from store.admin import ProductAdmin, ProductAdminForm
-from store.forms import MonitorProductFilterForm, SSDProductFilterForm
+from store.forms import MonitorProductFilterForm, NetworkProductFilterForm, SSDProductFilterForm
 from store.models import Category, Order, OrderItem, Product, ProductImage
 
 
@@ -1094,7 +1094,7 @@ class VideoCardCatalogFilterTests(TestCase):
         self.assertEqual(specifications['Штрихкод'], '4711377341394')
         self.assertEqual(
             [group['name'] for group in response.context['specification_groups']],
-            ['Основні характеристики', 'Інші'],
+            ['Основні характеристики'],
         )
 
 
@@ -2154,14 +2154,221 @@ class MonitorCatalogFilterTests(TestCase):
             'screen_surface',
             'interfaces',
             'built_in_speakers',
+        }
+        network_group = dict(ProductAdmin.fieldsets)['Характеристики мережевого обладнання']['fields']
+        expected_general_fields = {
             'manufacturer',
             'country_of_origin',
             'warranty_months',
             'features',
-            'color',
+            'network_barcode',
+            'network_note',
         }
 
         self.assertNotIn('Спільні характеристики товару', dict(ProductAdmin.fieldsets))
         self.assertEqual(len(admin_fields), len(set(admin_fields)))
         self.assertTrue(model_fields.issubset(set(admin_fields)))
         self.assertTrue(expected_monitor_fields.issubset(set(monitor_group)))
+        self.assertTrue(expected_general_fields.issubset(set(admin_fields)))
+
+
+class NetworkCatalogFilterTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Мережеві фільтри та подовжувачі')
+        self.extension = Product.objects.create(
+            name='ColorWay extension cord',
+            category=self.category,
+            price=Decimal('1200.00'),
+            manufacturer='ColorWay',
+            network_product_type='мережеві подовжувачі',
+            network_socket_count='5',
+            network_outlet_type='євро-розетка із заземленням (Тип F)',
+            network_input_plug_type='євровилка із заземленням (Тип F)',
+            network_usb_ports='2 x USB (type A)',
+            network_cable_length='1.8 м',
+            network_features='з вимикачем на кожну розетку, захист від перенапруги',
+            network_protection='від дітей, від короткого замикання',
+            network_total_power='≤ 3500 Вт',
+            color='чорний',
+        )
+        self.power_filter = Product.objects.create(
+            name='Defender power filter',
+            category=self.category,
+            price=Decimal('700.00'),
+            manufacturer='Defender',
+            network_product_type='мережеві фільтри живлення',
+            network_socket_count='3',
+            network_outlet_type='універсальна розетка',
+            network_input_plug_type='євровилка із заземленням (Тип F)',
+            network_usb_ports='1 x USB (type A)',
+            network_cable_length='3 м',
+            network_features='із загальним вимикачем',
+            network_protection='від перевантаження',
+            network_total_power='≤ 2200 Вт',
+            color='білий',
+        )
+        Product.objects.create(
+            name='Unclassified network product',
+            category=self.category,
+            price=Decimal('500.00'),
+        )
+        self.url = reverse('category_products', args=(self.category.pk,))
+
+    def test_network_catalog_shows_preset_and_dynamic_options_without_gray_items(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [group['name'] for group in response.context['filter_groups']],
+            [
+                'Тип',
+                'Кількість розеток',
+                'Тип вихідних розеток',
+                'Тип вхідної вилки',
+                'USB порти',
+                'Довжина кабелю',
+                'Особливості',
+                'Захист',
+                'Сумарна потужність підключеного навантаження',
+                'Виробник',
+                'Колір',
+            ],
+        )
+        self.assertContains(response, 'мережеві подовжувачі (1)')
+        self.assertContains(response, 'мережеві фільтри живлення (1)')
+        self.assertContains(response, '5 (1)')
+        self.assertContains(response, '3 (1)')
+        self.assertContains(response, '2 x USB (type A) (1)')
+        self.assertContains(response, '1.8 м (1)')
+        self.assertContains(response, 'ColorWay (1)')
+        self.assertContains(response, 'Defender (1)')
+        self.assertContains(response, 'чорний (1)')
+        self.assertNotContains(response, 'Acer')
+        self.assertContains(response, 'мережевий розгалужувач')
+        self.assertNotContains(response, '15 м')
+        self.assertNotContains(response, '≤ 5000 Вт')
+        self.assertNotContains(response, 'помаранчевий')
+
+    def test_network_catalog_filters_by_type_manufacturer_specs_and_price(self):
+        response = self.client.get(self.url, {
+            'network_product_type': 'мережеві подовжувачі',
+            'network_socket_count': '5',
+            'network_usb_ports': '2 x USB (type A)',
+            'network_features': 'з вимикачем на кожну розетку',
+            'network_protection': 'від дітей',
+            'manufacturer': 'ColorWay',
+            'price_min': '1000',
+            'price_max': '1500',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.extension])
+
+    def test_network_filter_form_shows_reference_options_without_products_or_gray_items(self):
+        form = NetworkProductFilterForm(
+            products=Product.objects.filter(
+                category=self.category,
+                name='No products match this filter',
+            ),
+        )
+
+        manufacturer_values = [value for value, _ in form.fields['manufacturer'].choices]
+        self.assertIn('ColorWay', manufacturer_values)
+        self.assertIn('Defender', manufacturer_values)
+        self.assertIn('XoKo', manufacturer_values)
+        self.assertNotIn('Delux', manufacturer_values)
+
+        cable_lengths = [
+            value
+            for value, _ in form.fields['network_cable_length'].choices
+        ]
+        self.assertIn('1.8 м', cable_lengths)
+        self.assertNotIn('15 м', cable_lengths)
+
+        protection_values = [
+            value
+            for value, _ in form.fields['network_protection'].choices
+        ]
+        self.assertIn('IP20', protection_values)
+        self.assertNotIn('IP40', protection_values)
+
+        admin_fields = [
+            field_name
+            for _, options in ProductAdmin.fieldsets
+            for field_name in options['fields']
+        ]
+        self.assertEqual(admin_fields.count('network_product_type'), 1)
+
+    def test_network_product_detail_shows_reference_specification_groups(self):
+        Product.objects.filter(pk=self.extension.pk).update(
+            network_cable_specification='3*1.5 мм²',
+            network_filter_material='вогнестійкий пластик',
+            network_additional_features='кріплення на стіну',
+            network_nominal_voltage='~250 В (макс)',
+            network_breaker_trip_current='16 А',
+            country_of_origin='Китай',
+            warranty_months=36,
+            network_barcode='4823108630551',
+            network_note='Виробник може змінювати властивості.',
+        )
+
+        response = self.client.get(reverse('product_detail', args=(self.extension.pk,)))
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Тип'], 'мережеві подовжувачі')
+        self.assertEqual(specifications['Кількість розеток'], '5')
+        self.assertEqual(specifications['Тип вихідних розеток'], 'євро-розетка із заземленням (Тип F)')
+        self.assertEqual(specifications['Довжина кабелю'], '1.8 м')
+        self.assertEqual(specifications['Технічні характеристики кабелю'], '3*1.5 мм²')
+        self.assertEqual(specifications['Матеріал фільтра'], 'вогнестійкий пластик')
+        self.assertEqual(specifications['Додаткові характеристики'], 'кріплення на стіну')
+        self.assertEqual(specifications['Номінальна напруга'], '~250 В (макс)')
+        self.assertEqual(specifications['Струм спрацьовування термозапобіжника'], '16 А')
+        self.assertEqual(specifications['Виробник'], 'ColorWay')
+        self.assertEqual(specifications['Країна виробництва'], 'Китай')
+        self.assertEqual(specifications['Гарантія, міс'], 36)
+        self.assertEqual(specifications['Штрихкод'], '4823108630551')
+        self.assertEqual(
+            [group['name'] for group in response.context['specification_groups']],
+            ['Основні характеристики'],
+        )
+        self.assertContains(response, 'specifications-dialog')
+
+    def test_network_admin_fields_are_grouped_without_duplicates(self):
+        admin_fields = [
+            field_name
+            for _, options in ProductAdmin.fieldsets
+            for field_name in options['fields']
+        ]
+        network_admin_fields = {
+            field_name for field_name in admin_fields
+            if field_name.startswith('network_')
+        }
+        network_model_fields = {
+            field.name
+            for field in Product._meta.fields
+            if field.name.startswith('network_')
+        }
+        network_fields = dict(ProductAdmin.fieldsets)['Характеристики мережевого обладнання']['fields']
+
+        self.assertEqual(len(admin_fields), len(set(admin_fields)))
+        self.assertEqual(network_admin_fields, network_model_fields)
+        self.assertTrue({
+            'network_barcode',
+            'network_note',
+            'color',
+            'manufacturer',
+            'country_of_origin',
+            'warranty_months',
+            'features',
+        }.issubset(set(network_fields)))
+
+    def test_empty_network_catalog_still_shows_filter_options(self):
+        Product.objects.filter(category=self.category).delete()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context['filter_groups']), 11)
+        self.assertContains(response, 'ColorWay')
+        self.assertContains(response, '1.8 м')

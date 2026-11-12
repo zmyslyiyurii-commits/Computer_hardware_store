@@ -22,6 +22,7 @@ from store.forms import (
     MemoryProductFilterForm,
     MonitorProductFilterForm,
     MotherboardProductFilterForm,
+    NetworkProductFilterForm,
     PowerSupplyProductFilterForm,
     ProcessorProductFilterForm,
     ProductReviewForm,
@@ -281,6 +282,8 @@ class CategoryProductsView(TemplateView):
             filter_form_class = ComputerProductFilterForm
         elif normalized_category_name == 'монітори':
             filter_form_class = MonitorProductFilterForm
+        elif normalized_category_name == 'мережеві фільтри та подовжувачі':
+            filter_form_class = NetworkProductFilterForm
         elif (
             _is_computer_components_category(category)
             and self.request.GET.get('component_type') == 'processor'
@@ -422,6 +425,54 @@ class CategoryProductsView(TemplateView):
 
 class ProductDetailView(TemplateView):
     template_name = 'product_detail.html'
+
+    network_specification_groups = (
+        ('Основні характеристики', (
+            'network_product_type',
+            'network_socket_count',
+            'network_outlet_type',
+            'network_input_plug_type',
+            'network_usb_ports',
+            'network_cable_length',
+            'network_cable_specification',
+            'network_filter_material',
+            'network_features',
+            'network_additional_features',
+            'network_nominal_voltage',
+            'network_protection',
+            'network_total_power',
+            'network_breaker_trip_current',
+            'color',
+            'manufacturer',
+            'country_of_origin',
+            'warranty_months',
+            'network_barcode',
+            'network_note',
+            'features',
+        )),
+    )
+
+    network_specification_labels = {
+        'network_product_type': 'Тип',
+        'network_socket_count': 'Кількість розеток',
+        'network_outlet_type': 'Тип вихідних розеток',
+        'network_input_plug_type': 'Тип вхідної вилки',
+        'network_usb_ports': 'USB-порти',
+        'network_cable_length': 'Довжина кабелю',
+        'network_cable_specification': 'Технічні характеристики кабелю',
+        'network_filter_material': 'Матеріал фільтра',
+        'network_features': 'Особливості',
+        'network_additional_features': 'Додаткові характеристики',
+        'network_nominal_voltage': 'Номінальна напруга',
+        'network_protection': 'Захист',
+        'network_total_power': 'Сумарна потужність підключеного навантаження',
+        'network_breaker_trip_current': 'Струм спрацьовування термозапобіжника',
+        'manufacturer': 'Виробник',
+        'country_of_origin': 'Країна виробництва',
+        'warranty_months': 'Гарантія, міс',
+        'network_barcode': 'Штрихкод',
+        'network_note': 'Примітка',
+    }
 
     video_card_specification_groups = (
         ('Основні характеристики', (
@@ -1174,6 +1225,8 @@ class ProductDetailView(TemplateView):
             specification_groups = self.motherboard_specification_groups
         elif computer_category_name == 'монітори':
             specification_groups = self.monitor_specification_groups
+        elif computer_category_name == 'мережеві фільтри та подовжувачі':
+            specification_groups = self.network_specification_groups
         elif computer_category_name == 'комп’ютери':
             specification_groups = self.computer_specification_groups
         else:
@@ -1219,6 +1272,8 @@ class ProductDetailView(TemplateView):
 
         if computer_category_name == 'монітори':
             specification_labels = self.monitor_specification_labels
+        elif computer_category_name == 'мережеві фільтри та подовжувачі':
+            specification_labels = self.network_specification_labels
         elif product.component_type == 'hdd':
             specification_labels = self.hdd_specification_labels
         elif product.component_type == 'case':

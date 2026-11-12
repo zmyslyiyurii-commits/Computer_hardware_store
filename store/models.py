@@ -30,6 +30,11 @@ class Product(models.Model):
         ('power_supply', 'Блоки живлення'),
         ('cooling', 'Системи охолодження'),
     )
+    NETWORK_PRODUCT_TYPE_CHOICES = (
+        ('мережевий розгалужувач', 'Мережевий розгалужувач'),
+        ('мережеві подовжувачі', 'Мережеві подовжувачі'),
+        ('мережеві фільтри живлення', 'Мережеві фільтри живлення'),
+    )
 
     # Основні дані товару, які редагуються через адміністративну панель.
     name = models.CharField('Назва', max_length=200)
@@ -478,6 +483,54 @@ class Product(models.Model):
     monitor_dimensions_without_stand = models.CharField('Розміри монітора без підставки', max_length=60, blank=True)
     monitor_weight_unboxed = models.CharField('Вага монітора без упаковки', max_length=30, blank=True)
     monitor_weight_boxed = models.CharField('Вага монітора з упаковкою', max_length=30, blank=True)
+    network_product_type = models.CharField(
+        'Тип мережевого обладнання',
+        max_length=80,
+        choices=NETWORK_PRODUCT_TYPE_CHOICES,
+        blank=True,
+    )
+    network_socket_count = models.CharField('Кількість розеток мережевого обладнання', max_length=20, blank=True)
+    network_outlet_type = models.CharField('Тип вихідних розеток мережевого обладнання', max_length=100, blank=True)
+    network_input_plug_type = models.CharField('Тип вхідної вилки мережевого обладнання', max_length=100, blank=True)
+    network_usb_ports = models.CharField('USB-порти мережевого обладнання', max_length=40, blank=True)
+    network_cable_length = models.CharField('Довжина кабелю мережевого обладнання', max_length=30, blank=True)
+    network_cable_specification = models.CharField(
+        'Технічні характеристики кабелю мережевого обладнання',
+        max_length=80,
+        blank=True,
+    )
+    network_filter_material = models.CharField(
+        'Матеріал мережевого фільтра',
+        max_length=100,
+        blank=True,
+    )
+    network_features = models.TextField(
+        'Особливості мережевого обладнання',
+        blank=True,
+        help_text='Якщо значень кілька, розділяйте їх комами.',
+    )
+    network_additional_features = models.TextField(
+        'Додаткові характеристики мережевого обладнання',
+        blank=True,
+    )
+    network_nominal_voltage = models.CharField(
+        'Номінальна напруга мережевого обладнання',
+        max_length=40,
+        blank=True,
+    )
+    network_protection = models.TextField(
+        'Захист мережевого обладнання',
+        blank=True,
+        help_text='Якщо значень кілька, розділяйте їх комами.',
+    )
+    network_total_power = models.CharField('Сумарна потужність підключеного навантаження', max_length=40, blank=True)
+    network_breaker_trip_current = models.CharField(
+        'Струм спрацьовування термозапобіжника мережевого обладнання',
+        max_length=30,
+        blank=True,
+    )
+    network_barcode = models.CharField('Штрихкод мережевого обладнання', max_length=80, blank=True)
+    network_note = models.TextField('Примітка до мережевого обладнання', blank=True)
     # Неопубліковані товари залишаються в адмінці, але не показуються покупцям.
     is_active = models.BooleanField('Опублікований', default=True)
     created_at = models.DateTimeField('Додано', auto_now_add=True)
