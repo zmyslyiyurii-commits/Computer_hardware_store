@@ -5,7 +5,12 @@ from django.test import TestCase
 from django.urls import reverse
 
 from store.admin import ProductAdmin, ProductAdminForm
-from store.forms import MonitorProductFilterForm, NetworkProductFilterForm, SSDProductFilterForm
+from store.forms import (
+    MonitorProductFilterForm,
+    NetworkProductFilterForm,
+    SSDProductFilterForm,
+    ThermalPasteProductFilterForm,
+)
 from store.models import Category, Order, OrderItem, Product, ProductImage
 
 
@@ -2372,3 +2377,107 @@ class NetworkCatalogFilterTests(TestCase):
         self.assertEqual(len(response.context['filter_groups']), 11)
         self.assertContains(response, 'ColorWay')
         self.assertContains(response, '1.8 м')
+
+
+class ThermalPasteCatalogTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Обслуговування ПК')
+        self.thermal_paste = Product.objects.create(
+            name='Arctic MX-4 4 г',
+            category=self.category,
+            price=Decimal('218.00'),
+            thermal_manufacturer='Arctic',
+            thermal_compatibility='для процесорів, для ноутбука, для відеокарти',
+            thermal_conductivity='8.5 W/mK',
+            thermal_weight='4 г',
+            thermal_packaging='шприц',
+            thermal_country_of_origin='Китай',
+            thermal_barcode='4895213701655',
+            thermal_note='Виробник може змінювати властивості.',
+        )
+        self.url = reverse('category_products', args=(self.category.pk,))
+
+    def test_empty_thermal_paste_catalog_shows_preset_options_and_service_link(self):
+        self.thermal_paste.delete()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [group['name'] for group in response.context['filter_groups']],
+            ['Виробник', 'Сумісність', 'Теплопровідність', 'Вага', 'Тип упаковки'],
+        )
+        self.assertContains(response, 'Arctic')
+        self.assertContains(response, 'для процесорів')
+        self.assertContains(response, '8.5 W/mK')
+        self.assertContains(response, '4 г')
+        self.assertContains(response, 'шприц')
+        self.assertContains(response, 'Обслуговування ПК')
+        self.assertContains(response, 'Термопаста, очищення та догляд за комп’ютером')
+
+    def test_thermal_pastes_category_alias_also_shows_filters(self):
+        category = Category.objects.create(name='Термопасти')
+
+        response = self.client.get(reverse('category_products', args=(category.pk,)))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [group['name'] for group in response.context['filter_groups']],
+            ['Виробник', 'Сумісність', 'Теплопровідність', 'Вага', 'Тип упаковки'],
+        )
+
+    def test_thermal_paste_filters_combine_price_and_specifications(self):
+        response = self.client.get(self.url, {
+            'thermal_manufacturer': 'Arctic',
+            'thermal_compatibility': 'для ноутбука',
+            'thermal_conductivity': '8.5 W/mK',
+            'thermal_weight': '4 г',
+            'thermal_packaging': 'шприц',
+            'price_min': '200',
+            'price_max': '250',
+        })
+
+        self.assertEqual(list(response.context['products']), [self.thermal_paste])
+        self.assertContains(response, 'Arctic (1)')
+        self.assertContains(response, 'для ноутбука (1)')
+        self.assertContains(response, 'шприц (1)')
+
+    def test_thermal_paste_product_page_shows_reference_specification_groups(self):
+        response = self.client.get(
+            reverse('product_detail', args=(self.thermal_paste.pk,)),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        specifications = dict(response.context['specifications'])
+        self.assertEqual(specifications['Сумісність'], 'для процесорів, для ноутбука, для відеокарти')
+        self.assertEqual(specifications['Теплопровідність'], '8.5 W/mK')
+        self.assertEqual(specifications['Вага'], '4 г')
+        self.assertEqual(specifications['Тип упаковки'], 'шприц')
+        self.assertEqual(specifications['Виробник'], 'Arctic')
+        self.assertEqual(specifications['Країна виробництва'], 'Китай')
+        self.assertEqual(specifications['Штрихкод'], '4895213701655')
+        self.assertEqual(
+            [group['name'] for group in response.context['specification_groups']],
+            ['Основні характеристики', 'Інші'],
+        )
+
+    def test_thermal_paste_admin_fields_are_grouped_without_duplicates(self):
+        admin_fields = [
+            field_name
+            for _, options in ProductAdmin.fieldsets
+            for field_name in options['fields']
+        ]
+        paste_fields = {
+            field.name
+            for field in Product._meta.fields
+            if field.name.startswith('thermal_')
+        }
+        paste_admin_fields = {
+            field_name for field_name in admin_fields
+            if field_name.startswith('thermal_')
+        }
+        paste_group = dict(ProductAdmin.fieldsets)['Характеристики термопасти']['fields']
+
+        self.assertEqual(len(admin_fields), len(set(admin_fields)))
+        self.assertEqual(paste_admin_fields, paste_fields)
+        self.assertEqual(set(paste_group), paste_fields)

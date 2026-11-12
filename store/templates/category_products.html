@@ -70,6 +70,17 @@
             <span class="product-count">{{ products|length }} товарів</span>
         </div>
 
+        {% if thermal_paste_catalog %}
+            <a class="thermal-paste-service" href="{% url 'home' %}#service">
+                <span class="thermal-paste-service-icon" aria-hidden="true">⚙</span>
+                <span>
+                    <strong>Обслуговування ПК</strong>
+                    <small>Термопаста, очищення та догляд за комп’ютером</small>
+                </span>
+                <span class="thermal-paste-service-arrow" aria-hidden="true">↗</span>
+            </a>
+        {% endif %}
+
         <div class="catalog-layout{% if filter_groups %} has-filters{% endif %}">
             {% if filter_groups %}
                 <aside class="filters" aria-label="Фільтри товарів">

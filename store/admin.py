@@ -504,7 +504,27 @@ class ProductAdmin(admin.ModelAdmin):
             ),
             'classes': ('collapse',),
         }),
+        ('Характеристики термопасти', {
+            'fields': (
+                'thermal_compatibility',
+                'thermal_conductivity',
+                'thermal_weight',
+                'thermal_packaging',
+                'thermal_manufacturer',
+                'thermal_country_of_origin',
+                'thermal_barcode',
+                'thermal_note',
+            ),
+            'classes': ('collapse',),
+        }),
     )
+
+    def save_model(self, request, obj, form, change):
+        category_name = obj.category.name.strip().casefold().replace("'", '’')
+        if category_name in ('термопаста', 'термопасти', 'обслуговування пк'):
+            obj.manufacturer = obj.thermal_manufacturer
+            obj.country_of_origin = obj.thermal_country_of_origin
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Review)

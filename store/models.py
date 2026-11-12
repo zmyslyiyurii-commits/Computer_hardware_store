@@ -531,6 +531,18 @@ class Product(models.Model):
     )
     network_barcode = models.CharField('Штрихкод мережевого обладнання', max_length=80, blank=True)
     network_note = models.TextField('Примітка до мережевого обладнання', blank=True)
+    thermal_compatibility = models.TextField(
+        'Сумісність термопасти',
+        blank=True,
+        help_text='Якщо значень кілька, розділяйте їх комами.',
+    )
+    thermal_conductivity = models.CharField('Теплопровідність термопасти', max_length=40, blank=True)
+    thermal_weight = models.CharField('Вага термопасти', max_length=30, blank=True)
+    thermal_packaging = models.CharField('Тип упаковки термопасти', max_length=40, blank=True)
+    thermal_manufacturer = models.CharField('Виробник термопасти', max_length=100, blank=True)
+    thermal_country_of_origin = models.CharField('Країна виробництва термопасти', max_length=100, blank=True)
+    thermal_barcode = models.CharField('Штрихкод термопасти', max_length=80, blank=True)
+    thermal_note = models.TextField('Примітка до термопасти', blank=True)
     # Неопубліковані товари залишаються в адмінці, але не показуються покупцям.
     is_active = models.BooleanField('Опублікований', default=True)
     created_at = models.DateTimeField('Додано', auto_now_add=True)

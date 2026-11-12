@@ -32,6 +32,13 @@ button { font: inherit; }
 .catalog-title h1 { margin: 0; font-size: clamp(30px, 4vw, 42px); letter-spacing: -.055em; }
 .catalog-description { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
 .product-count { padding-bottom: 3px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.thermal-paste-service { display: flex; max-width: 520px; min-height: 80px; align-items: center; gap: 12px; margin: -8px 0 20px; padding: 14px; border: 1px solid #d5e0c3; border-radius: 14px; background: #fbfcf8; transition: border-color .15s ease, box-shadow .15s ease; }
+.thermal-paste-service:hover { border-color: #a7bf7f; box-shadow: 0 4px 14px rgb(23 33 30 / 6%); }
+.thermal-paste-service-icon { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; border-radius: 11px; color: #668d2b; background: #f0f4e9; font-size: 20px; }
+.thermal-paste-service strong, .thermal-paste-service small { display: block; }
+.thermal-paste-service strong { font-size: 13px; }
+.thermal-paste-service small { margin-top: 5px; color: var(--muted); font-size: 11px; }
+.thermal-paste-service-arrow { margin-left: auto; color: var(--muted); font-size: 14px; }
 
 .catalog-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 22px; }
 .catalog-layout.has-filters { grid-template-columns: 250px minmax(0, 1fr); }

@@ -29,6 +29,7 @@ from store.forms import (
     ProfileDetailsForm,
     RegistrationForm,
     SSDProductFilterForm,
+    ThermalPasteProductFilterForm,
     VideoCardProductFilterForm,
 )
 from store.models import Category, CustomerProfile, Order, OrderItem, Product, Review
@@ -76,6 +77,11 @@ def _get_cart_items(request):
 
 def _is_computer_components_category(category):
     return category.name.strip().casefold().replace("'", '’') == 'комплектуючі для пк'
+
+
+def _is_thermal_paste_category_name(category_name):
+    normalized_name = category_name.strip().casefold().replace("'", '’')
+    return normalized_name in ('термопаста', 'термопасти', 'обслуговування пк')
 
 
 def _search_products(query):
@@ -250,6 +256,7 @@ class CategoryProductsView(TemplateView):
             if category.name.strip().casefold().startswith('ноутбук')
             else category.name
         )
+        context['thermal_paste_catalog'] = _is_thermal_paste_category_name(category.name)
         context['products'] = Product.objects.filter(
             category=category,
             is_active=True,
@@ -284,6 +291,8 @@ class CategoryProductsView(TemplateView):
             filter_form_class = MonitorProductFilterForm
         elif normalized_category_name == 'мережеві фільтри та подовжувачі':
             filter_form_class = NetworkProductFilterForm
+        elif _is_thermal_paste_category_name(category.name):
+            filter_form_class = ThermalPasteProductFilterForm
         elif (
             _is_computer_components_category(category)
             and self.request.GET.get('component_type') == 'processor'
@@ -425,6 +434,32 @@ class CategoryProductsView(TemplateView):
 
 class ProductDetailView(TemplateView):
     template_name = 'product_detail.html'
+
+    thermal_paste_specification_groups = (
+        ('Основні характеристики', (
+            'thermal_compatibility',
+            'thermal_conductivity',
+            'thermal_weight',
+            'thermal_packaging',
+        )),
+        ('Інші', (
+            'thermal_manufacturer',
+            'thermal_country_of_origin',
+            'thermal_barcode',
+            'thermal_note',
+        )),
+    )
+
+    thermal_paste_specification_labels = {
+        'thermal_compatibility': 'Сумісність',
+        'thermal_conductivity': 'Теплопровідність',
+        'thermal_weight': 'Вага',
+        'thermal_packaging': 'Тип упаковки',
+        'thermal_manufacturer': 'Виробник',
+        'thermal_country_of_origin': 'Країна виробництва',
+        'thermal_barcode': 'Штрихкод',
+        'thermal_note': 'Примітка',
+    }
 
     network_specification_groups = (
         ('Основні характеристики', (
@@ -1227,6 +1262,8 @@ class ProductDetailView(TemplateView):
             specification_groups = self.monitor_specification_groups
         elif computer_category_name == 'мережеві фільтри та подовжувачі':
             specification_groups = self.network_specification_groups
+        elif _is_thermal_paste_category_name(product.category.name):
+            specification_groups = self.thermal_paste_specification_groups
         elif computer_category_name == 'комп’ютери':
             specification_groups = self.computer_specification_groups
         else:
@@ -1274,6 +1311,8 @@ class ProductDetailView(TemplateView):
             specification_labels = self.monitor_specification_labels
         elif computer_category_name == 'мережеві фільтри та подовжувачі':
             specification_labels = self.network_specification_labels
+        elif _is_thermal_paste_category_name(product.category.name):
+            specification_labels = self.thermal_paste_specification_labels
         elif product.component_type == 'hdd':
             specification_labels = self.hdd_specification_labels
         elif product.component_type == 'case':
