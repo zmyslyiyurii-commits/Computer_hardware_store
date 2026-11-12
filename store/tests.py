@@ -280,6 +280,97 @@ class ComputerComponentsCatalogTests(TestCase):
         )
 
 
+class PeripheralCatalogTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Периферія')
+
+    def test_exact_peripheral_category_search_opens_type_picker(self):
+        response = self.client.get(
+            reverse('home'),
+            {'q': self.category.name},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('peripheral_catalog', args=(self.category.pk,)),
+        )
+
+    def test_peripheral_category_opens_three_type_picker(self):
+        response = self.client.get(
+            reverse('category_products', args=(self.category.pk,)),
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('peripheral_catalog', args=(self.category.pk,)),
+        )
+
+        picker_response = self.client.get(
+            reverse('peripheral_catalog', args=(self.category.pk,)),
+        )
+
+        self.assertEqual(picker_response.status_code, 200)
+        self.assertEqual(
+            [card['type'] for card in picker_response.context['peripheral_cards']],
+            ['keyboard', 'mouse', 'mouse_pad'],
+        )
+        self.assertContains(picker_response, 'Клавіатури')
+        self.assertContains(picker_response, 'Мишки')
+        self.assertContains(picker_response, 'Килимки')
+        self.assertContains(picker_response, 'B0005197_1740073227.webp')
+        self.assertContains(picker_response, 'U0045165_1740076257.webp')
+        self.assertContains(picker_response, 'U0720825_1739613411.webp')
+        self.assertContains(picker_response, '?peripheral_type=keyboard')
+        self.assertContains(picker_response, '?peripheral_type=mouse')
+        self.assertContains(picker_response, '?peripheral_type=mouse_pad')
+
+    def test_peripheral_picker_requires_valid_subcategory_and_catalog_filters_by_type(self):
+        keyboard = Product.objects.create(
+            name='Keyboard',
+            category=self.category,
+            peripheral_type='keyboard',
+            price=Decimal('1000.00'),
+        )
+        Product.objects.create(
+            name='Mouse',
+            category=self.category,
+            peripheral_type='mouse',
+            price=Decimal('500.00'),
+        )
+
+        response = self.client.get(
+            reverse('category_products', args=(self.category.pk,)),
+            {'peripheral_type': 'keyboard'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context['products']), [keyboard])
+        self.assertEqual(response.context['category_title'], 'Клавіатури')
+        self.assertContains(response, '← Уся периферія')
+
+        invalid_response = self.client.get(
+            reverse('category_products', args=(self.category.pk,)),
+            {'peripheral_type': 'speakers'},
+        )
+        self.assertRedirects(
+            invalid_response,
+            reverse('peripheral_catalog', args=(self.category.pk,)),
+        )
+
+    def test_peripheral_type_is_available_in_product_admin(self):
+        admin_fields = [
+            field_name
+            for _, options in ProductAdmin.fieldsets
+            for field_name in options['fields']
+        ]
+
+        self.assertEqual(admin_fields.count('peripheral_type'), 1)
+        self.assertIn(
+            ('mouse_pad', 'Килимки'),
+            Product._meta.get_field('peripheral_type').choices,
+        )
+
+
 class ProcessorCatalogFilterTests(TestCase):
     def setUp(self):
         self.category = Category.objects.create(name='Комплектуючі для ПК')

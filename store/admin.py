@@ -75,6 +75,7 @@ class ProductAdmin(admin.ModelAdmin):
                 'name',
                 'category',
                 'component_type',
+                'peripheral_type',
                 'price',
                 'stock_quantity',
                 'image_url',

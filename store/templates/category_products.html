@@ -54,6 +54,8 @@
     <main class="page-container catalog-page">
         {% if component_category %}
             <a class="components-back-link" href="{% url 'computer_components' category.pk %}">← Усі комплектуючі для ПК</a>
+        {% elif peripheral_category %}
+            <a class="components-back-link" href="{% url 'peripheral_catalog' category.pk %}">← Уся периферія</a>
         {% endif %}
         <div class="catalog-title">
             <div>
@@ -86,12 +88,14 @@
                 <aside class="filters" aria-label="Фільтри товарів">
                     <div class="filters-heading">
                         <h2>Фільтри</h2>
-                        <a class="clear-filters" href="{% url 'category_products' category.pk %}{% if component_category %}?component_type={{ selected_component_type }}{% endif %}">Очистити</a>
+                        <a class="clear-filters" href="{% url 'category_products' category.pk %}{% if component_category %}?component_type={{ selected_component_type }}{% elif peripheral_category %}?peripheral_type={{ selected_peripheral_type }}{% endif %}">Очистити</a>
                     </div>
                     <form method="get" class="filter-form">
                         {% if filter_form %}
                             {% if component_category %}
                                 <input type="hidden" name="component_type" value="{{ selected_component_type }}">
+                            {% elif peripheral_category %}
+                                <input type="hidden" name="peripheral_type" value="{{ selected_peripheral_type }}">
                             {% endif %}
                             <div class="filter-list">
                                 {% if filter_form.non_field_errors %}
@@ -206,9 +210,13 @@
                     <div class="empty-state">
                         <span class="empty-icon" aria-hidden="true">⌕</span>
                         <h2>У цій категорії поки немає товарів</h2>
-                        {% if component_category %}
+                        {% if component_category or peripheral_category %}
                             <p>Товари цієї групи з’являться тут, коли їх буде додано та позначено відповідним типом в адмінпанелі.</p>
-                            <a href="{% url 'computer_components' category.pk %}">Обрати іншу групу комплектуючих</a>
+                            {% if component_category %}
+                                <a href="{% url 'computer_components' category.pk %}">Обрати іншу групу комплектуючих</a>
+                            {% else %}
+                                <a href="{% url 'peripheral_catalog' category.pk %}">Обрати інший тип периферії</a>
+                            {% endif %}
                         {% else %}
                             <p>Коли товари будуть додані через адмінпанель, вони з’являться тут.</p>
                             <a href="{% url 'home' %}">Повернутися на головну</a>

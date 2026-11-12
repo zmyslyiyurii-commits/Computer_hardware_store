@@ -35,6 +35,11 @@ class Product(models.Model):
         ('мережеві подовжувачі', 'Мережеві подовжувачі'),
         ('мережеві фільтри живлення', 'Мережеві фільтри живлення'),
     )
+    PERIPHERAL_TYPE_CHOICES = (
+        ('keyboard', 'Клавіатури'),
+        ('mouse', 'Мишки'),
+        ('mouse_pad', 'Килимки'),
+    )
 
     # Основні дані товару, які редагуються через адміністративну панель.
     name = models.CharField('Назва', max_length=200)
@@ -57,6 +62,12 @@ class Product(models.Model):
         'Тип комплектуючого для ПК',
         max_length=30,
         choices=COMPONENT_TYPE_CHOICES,
+        blank=True,
+    )
+    peripheral_type = models.CharField(
+        'Тип периферії',
+        max_length=20,
+        choices=PERIPHERAL_TYPE_CHOICES,
         blank=True,
     )
     badge = models.CharField('Бейдж', max_length=50, blank=True)

@@ -79,6 +79,10 @@ def _is_computer_components_category(category):
     return category.name.strip().casefold().replace("'", '’') == 'комплектуючі для пк'
 
 
+def _is_peripheral_category(category):
+    return category.name.strip().casefold().replace("'", '’') == 'периферія'
+
+
 def _is_thermal_paste_category_name(category_name):
     normalized_name = category_name.strip().casefold().replace("'", '’')
     return normalized_name in ('термопаста', 'термопасти', 'обслуговування пк')
@@ -107,6 +111,8 @@ class HomeView(TemplateView):
             if category:
                 if _is_computer_components_category(category):
                     return redirect('computer_components', category_id=category.pk)
+                if _is_peripheral_category(category):
+                    return redirect('peripheral_catalog', category_id=category.pk)
                 return redirect(
                     'category_products',
                     category_id=category.pk,
@@ -231,6 +237,61 @@ class ComputerComponentsView(TemplateView):
         return context
 
 
+class PeripheralCatalogView(TemplateView):
+    template_name = 'peripheral_catalog.html'
+
+    peripheral_cards = (
+        (
+            'keyboard',
+            'Клавіатури',
+            'Клавіатури для роботи, навчання та ігор',
+            'https://brain.com.ua/static/images/prod_img/9/7/B0005197_1740073227.webp',
+        ),
+        (
+            'mouse',
+            'Мишки',
+            'Дротові та бездротові мишки',
+            'https://brain.com.ua/static/images/prod_img/6/5/U0045165_1740076257.webp',
+        ),
+        (
+            'mouse_pad',
+            'Килимки',
+            'Килимки для комфортного керування мишкою',
+            'https://brain.com.ua/static/images/prod_img/2/5/U0720825_1739613411.webp',
+        ),
+    )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        category = get_object_or_404(
+            Category,
+            pk=self.kwargs['category_id'],
+            name='Периферія',
+        )
+        counts = dict(
+            Product.objects.filter(category=category, is_active=True)
+            .values('peripheral_type')
+            .annotate(product_count=Count('pk'))
+            .values_list('peripheral_type', 'product_count')
+        )
+        context.update({
+            'category': category,
+            'categories': Category.objects.all(),
+            'cart_count': _cart_count(self.request),
+            'peripheral_cards': [
+                {
+                    'type': peripheral_type,
+                    'title': title,
+                    'description': description,
+                    'image_url': image_url,
+                    'product_count': counts.get(peripheral_type, 0),
+                }
+                for peripheral_type, title, description, image_url in self.peripheral_cards
+            ],
+        })
+        return context
+
+
 class CategoryProductsView(TemplateView):
     # Сторінка каталогу відбирає товари за категорією з адреси сторінки.
     template_name = 'category_products.html'
@@ -242,6 +303,11 @@ class CategoryProductsView(TemplateView):
             valid_types = {value for value, _ in Product.COMPONENT_TYPE_CHOICES}
             if component_type not in valid_types:
                 return redirect('computer_components', category_id=category.pk)
+        if _is_peripheral_category(category):
+            peripheral_type = request.GET.get('peripheral_type')
+            valid_types = {value for value, _ in Product.PERIPHERAL_TYPE_CHOICES}
+            if peripheral_type not in valid_types:
+                return redirect('peripheral_catalog', category_id=category.pk)
         return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -278,6 +344,13 @@ class CategoryProductsView(TemplateView):
             context['case_catalog'] = selected_type == 'case'
             context['power_supply_catalog'] = selected_type == 'power_supply'
             context['cooling_catalog'] = selected_type == 'cooling'
+        if _is_peripheral_category(category):
+            selected_type = self.request.GET['peripheral_type']
+            selected_title = dict(Product.PERIPHERAL_TYPE_CHOICES)[selected_type]
+            context['products'] = context['products'].filter(peripheral_type=selected_type)
+            context['category_title'] = selected_title
+            context['peripheral_category'] = True
+            context['selected_peripheral_type'] = selected_type
         context['filter_groups'] = ()
         context['filter_form'] = None
         context['placeholder_filter_groups'] = ()
