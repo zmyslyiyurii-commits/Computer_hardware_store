@@ -937,7 +937,8 @@ class ProductDetailView(TemplateView):
             'manufacturer',
             'country_of_origin',
             'warranty_months',
-            'features',
+            'monitor_barcode',
+            'monitor_note',
         )),
     )
 
@@ -973,7 +974,8 @@ class ProductDetailView(TemplateView):
         'manufacturer': 'Виробник',
         'country_of_origin': 'Країна виробництва',
         'warranty_months': 'Гарантія, міс',
-        'features': 'Примітка',
+        'monitor_barcode': 'Штрихкод',
+        'monitor_note': 'Примітка',
     }
 
     cooling_specification_labels = {
@@ -1344,6 +1346,8 @@ class ProductDetailView(TemplateView):
 
         def specification_value(field_name):
             value = getattr(product, field_name)
+            if field_name == 'monitor_note' and not value:
+                return product.features
             if product.component_type == 'power_supply':
                 legacy_fields = {
                     'psu_manufacturer': 'manufacturer',

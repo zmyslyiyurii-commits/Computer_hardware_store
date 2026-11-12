@@ -494,6 +494,8 @@ class Product(models.Model):
     monitor_dimensions_without_stand = models.CharField('Розміри монітора без підставки', max_length=60, blank=True)
     monitor_weight_unboxed = models.CharField('Вага монітора без упаковки', max_length=30, blank=True)
     monitor_weight_boxed = models.CharField('Вага монітора з упаковкою', max_length=30, blank=True)
+    monitor_barcode = models.CharField('Штрихкод монітора', max_length=80, blank=True)
+    monitor_note = models.TextField('Примітка до монітора', blank=True)
     network_product_type = models.CharField(
         'Тип мережевого обладнання',
         max_length=80,

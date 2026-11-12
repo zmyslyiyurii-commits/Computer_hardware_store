@@ -54,6 +54,43 @@ class ProductAdminForm(forms.ModelForm):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    monitor_fields = (
+        'monitor_display_type',
+        'display_diagonal',
+        'matrix_type',
+        'resolution',
+        'refresh_rate',
+        'monitor_aspect_ratio',
+        'monitor_backlight',
+        'screen_surface',
+        'monitor_response_time',
+        'monitor_brightness',
+        'monitor_static_contrast',
+        'monitor_dynamic_contrast',
+        'monitor_viewing_angles',
+        'monitor_max_colors',
+        'monitor_image_enhancement',
+        'monitor_sync_technology',
+        'interfaces',
+        'monitor_stand_adjustment',
+        'monitor_tilt_angle',
+        'monitor_vesa',
+        'monitor_power_consumption',
+        'monitor_standby_power',
+        'monitor_dimensions_with_stand',
+        'monitor_dimensions_without_stand',
+        'monitor_weight_unboxed',
+        'monitor_weight_boxed',
+        'built_in_speakers',
+        'manufacturer',
+        'country_of_origin',
+        'warranty_months',
+        'monitor_barcode',
+        'monitor_note',
+        'color',
+        'features',
+    )
+
     form = ProductAdminForm
     list_display = (
         'name',
@@ -476,6 +513,10 @@ class ProductAdmin(admin.ModelAdmin):
                 'monitor_weight_unboxed',
                 'monitor_weight_boxed',
                 'built_in_speakers',
+                'manufacturer',
+                'country_of_origin',
+                'monitor_barcode',
+                'monitor_note',
             ),
             'classes': ('collapse',),
         }),
@@ -496,8 +537,6 @@ class ProductAdmin(admin.ModelAdmin):
                 'network_total_power',
                 'network_breaker_trip_current',
                 'color',
-                'manufacturer',
-                'country_of_origin',
                 'warranty_months',
                 'features',
                 'network_barcode',
@@ -519,6 +558,54 @@ class ProductAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
         }),
     )
+
+    class Media:
+        js = ('admin_product_category.js',)
+
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        category_id = request.GET.get('category')
+        if category_id and category_id.isdecimal():
+            initial['category'] = category_id
+        return initial
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)
+        category_name = obj.category.name if obj else ''
+        if not category_name:
+            category_id = request.POST.get('category') or request.GET.get('category')
+            if category_id and category_id.isdecimal():
+                category_name = (
+                    Category.objects.filter(pk=category_id)
+                    .values_list('name', flat=True)
+                    .first()
+                    or ''
+                )
+        if category_name.strip().casefold().startswith('монітор'):
+            return (
+                fieldsets[0],
+                ('Характеристики монітора', {
+                    'fields': self.monitor_fields,
+                }),
+            )
+        if category_name.strip().casefold() == 'мережеві фільтри та подовжувачі':
+            return tuple(
+                (
+                    title,
+                    {
+                        **options,
+                        'fields': (
+                            *options['fields'],
+                            'manufacturer',
+                            'country_of_origin',
+                        ),
+                    },
+                )
+                if title == 'Характеристики мережевого обладнання'
+                else (title, options)
+                for title, options in fieldsets
+            )
+        return fieldsets
 
     def save_model(self, request, obj, form, change):
         category_name = obj.category.name.strip().casefold().replace("'", '’')

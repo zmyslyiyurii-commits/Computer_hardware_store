@@ -1,7 +1,8 @@
 from decimal import Decimal
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.contrib import admin
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
 from store.admin import ProductAdmin, ProductAdminForm
@@ -2116,6 +2117,8 @@ class MonitorCatalogFilterTests(TestCase):
             color='чорний',
             country_of_origin='Китай',
             warranty_months=12,
+            monitor_barcode='69473657845',
+            monitor_note='Виробник може змінювати властивості, характеристики, зовнішній вигляд і комплектацію товарів без попередження',
             features='Виробник може змінювати властивості, характеристики, зовнішній вигляд і комплектацію товарів без попередження',
             monitor_display_type='Широкоформатний, безрамковий',
             monitor_aspect_ratio='16:9',
@@ -2213,6 +2216,7 @@ class MonitorCatalogFilterTests(TestCase):
         self.assertEqual(specifications['Виробник'], 'Vinga')
         self.assertEqual(specifications['Країна виробництва'], 'Китай')
         self.assertEqual(specifications['Гарантія, міс'], 12)
+        self.assertEqual(specifications['Штрихкод'], '69473657845')
         self.assertEqual(specifications['Колір'], 'чорний')
         self.assertEqual(
             specifications['Примітка'],
@@ -2229,6 +2233,58 @@ class MonitorCatalogFilterTests(TestCase):
                 'Інші',
             ],
         )
+
+    def test_monitor_admin_puts_other_specs_in_monitor_fieldset(self):
+        product_admin = ProductAdmin(Product, admin.site)
+        add_request = RequestFactory().get(
+            '/admin/store/product/add/',
+            {'category': self.category.pk},
+        )
+        add_fieldsets = product_admin.get_fieldsets(add_request)
+        fieldsets = product_admin.get_fieldsets(
+            RequestFactory().get('/admin/store/product/'),
+            self.monitor,
+        )
+        fieldsets_by_name = dict(fieldsets)
+        monitor_fields = set(fieldsets_by_name['Характеристики монітора']['fields'])
+        all_fields = [
+            field_name
+            for _, options in fieldsets
+            for field_name in options['fields']
+        ]
+
+        self.assertEqual(
+            [title for title, _ in fieldsets],
+            ['Основна інформація', 'Характеристики монітора'],
+        )
+        self.assertEqual(
+            [title for title, _ in add_fieldsets],
+            ['Основна інформація', 'Характеристики монітора'],
+        )
+        self.assertEqual(
+            product_admin.get_changeform_initial_data(add_request)['category'],
+            str(self.category.pk),
+        )
+        self.assertEqual(len(all_fields), len(set(all_fields)))
+        self.assertTrue({
+            'manufacturer',
+            'country_of_origin',
+            'warranty_months',
+            'monitor_barcode',
+            'monitor_note',
+        }.issubset(monitor_fields))
+
+    def test_monitor_admin_fields_work_for_singular_category_name(self):
+        singular_category = Category.objects.create(name='Монітор')
+        request = RequestFactory().get(
+            '/admin/store/product/add/',
+            {'category': singular_category.pk},
+        )
+        fieldsets = ProductAdmin(Product, admin.site).get_fieldsets(request)
+        monitor_fields = set(dict(fieldsets)['Характеристики монітора']['fields'])
+
+        self.assertIn('manufacturer', monitor_fields)
+        self.assertIn('country_of_origin', monitor_fields)
 
     def test_monitor_admin_fields_are_unique_and_present(self):
         admin_fields = [
@@ -2250,8 +2306,9 @@ class MonitorCatalogFilterTests(TestCase):
             'screen_surface',
             'interfaces',
             'built_in_speakers',
+            'manufacturer',
+            'country_of_origin',
         }
-        network_group = dict(ProductAdmin.fieldsets)['Характеристики мережевого обладнання']['fields']
         expected_general_fields = {
             'manufacturer',
             'country_of_origin',
@@ -2445,7 +2502,13 @@ class NetworkCatalogFilterTests(TestCase):
             for field in Product._meta.fields
             if field.name.startswith('network_')
         }
-        network_fields = dict(ProductAdmin.fieldsets)['Характеристики мережевого обладнання']['fields']
+        network_request = RequestFactory().get(
+            '/admin/store/product/add/',
+            {'category': self.category.pk},
+        )
+        network_fields = dict(
+            ProductAdmin(Product, admin.site).get_fieldsets(network_request)
+        )['Характеристики мережевого обладнання']['fields']
 
         self.assertEqual(len(admin_fields), len(set(admin_fields)))
         self.assertEqual(network_admin_fields, network_model_fields)
